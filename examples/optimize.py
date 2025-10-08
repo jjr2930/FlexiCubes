@@ -35,10 +35,11 @@ from flexicubes import FlexiCubes
 def lr_schedule(iter):
     return max(0.0, 10**(-(iter)*0.0002)) # Exponential falloff from [1.0, 0.1] over 5k epochs.    
 
-def time_to_string(time):
-    h = time // 3600
-    m = (time % 3600) // 60
-    s = time % 60
+def time_to_string(seconds):
+    seconds = int(seconds)
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
     return f"{h:02d}:{m:02d}:{s:02d}"
 
 def save_target_images(target, iteration, output_dir):
