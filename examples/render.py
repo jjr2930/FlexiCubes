@@ -21,6 +21,7 @@ import torch
 import nvdiffrast.torch as dr
 import kaolin as kal
 import util
+import CameraMetrixParser
 
 ###############################################################################
 # Functions adapted from https://github.com/NVlabs/nvdiffrec
@@ -50,12 +51,22 @@ def get_random_camera_batch(batch_size, fovy = np.deg2rad(45), iter_res=[512,512
             mv     = util.translate(0, 0, -cam_radius) @ util.rotate_y(angle)
             mvp    = proj_mtx @ mv
             return mv, mvp
+        
         mv_batch = []
         mvp_batch = []
-        for i in range(batch_size):
+
+        camera_matrix_parser = CameraMetrixParser.CameraMetrixParser(os.path.join(os.path.dirname(__file__), "data", "inputmodels", "CameraModelViewMatrix.json"))
+        randomCameraMatrix = camera_matrix_parser.getRandomMatrix()
+        proj_mtx = util.perspective(fovy, iter_res[1] / iter_res[0], cam_near_far[0], cam_near_far[1])
+        mvp = randomCameraMatrix @ proj_mtx
+        mv_batch.append(camera_matrix_parser.getRandomMatrix())
+        mvp_batch.append(mvp)
+
+        for i in range(batch_size - 1):
             mv, mvp = get_random_camera()
             mv_batch.append(mv)
             mvp_batch.append(mvp)
+        
         return torch.stack(mv_batch).to(device), torch.stack(mvp_batch).to(device)
 
 def get_rotate_camera(itr, fovy = np.deg2rad(45), iter_res=[512,512], cam_near_far=[0.1, 1000.0], cam_radius=3.0, device="cuda", use_kaolin=True):
