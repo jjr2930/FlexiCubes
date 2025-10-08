@@ -95,6 +95,32 @@ if __name__ == "__main__":
         mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
         # render gt mesh
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
+        
+        # Save target images to files
+        target_images_dir = os.path.join(FLAGS.out_dir, 'target_images')
+        os.makedirs(target_images_dir, exist_ok=True)
+        
+        # Save mask images
+        mask_images = target['mask'].detach().cpu().numpy()
+        for i in range(mask_images.shape[0]):
+            mask_img = (mask_images[i] * 255).astype(np.uint8)
+            imageio.imwrite(os.path.join(target_images_dir, f'mask_iter_{it:04d}_batch_{i:02d}.png'), mask_img)
+        
+        # Save depth images
+        depth_images = target['depth'].detach().cpu().numpy()
+        for i in range(depth_images.shape[0]):
+            # Normalize depth values to 0-255 range
+            depth_img = depth_images[i]
+            depth_min, depth_max = depth_img.min(), depth_img.max()
+            if depth_max > depth_min:
+                depth_img = (depth_img - depth_min) / (depth_max - depth_min) * 255
+            else:
+                depth_img = np.zeros_like(depth_img)
+            depth_img = depth_img.astype(np.uint8)
+            imageio.imwrite(os.path.join(target_images_dir, f'depth_iter_{it:04d}_batch_{i:02d}.png'), depth_img)
+        
+
+
         # extract and render FlexiCubes mesh
         grid_verts = x_nx3 + (2-1e-8) / (FLAGS.voxel_grid_res * 2) * torch.tanh(deform)
         vertices, faces, L_dev = fc(grid_verts, sdf, cube_fx8, FLAGS.voxel_grid_res, beta_fx12=weight[:,:12], alpha_fx8=weight[:,12:20],
