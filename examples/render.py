@@ -143,7 +143,7 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
     '''
     v_pos_clip = util.xfm_points(mesh.vertices.unsqueeze(0), mvp)  # Rotate it to camera coordinates
     rast, db = dr.rasterize(
-        dr.RasterizeGLContext(), v_pos_clip, mesh.faces.int(), iter_res)
+        glctx, v_pos_clip, mesh.faces.int(), iter_res)
 
     out_dict = {}
     for type in return_types:
