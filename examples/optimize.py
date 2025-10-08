@@ -35,6 +35,48 @@ from flexicubes import FlexiCubes
 def lr_schedule(iter):
     return max(0.0, 10**(-(iter)*0.0002)) # Exponential falloff from [1.0, 0.1] over 5k epochs.    
 
+def print_time_info(start_time=None):
+    current_time = time.time()
+    if start_time is not None:
+        duration = current_time - start_time
+        print(f"Now time: {current_time}, duration time: {duration}")
+    else:
+        print(f"Now time: {current_time}")
+
+def save_target_images(target, iteration, output_dir):
+    """Save target mask and depth images to files"""
+    target_images_dir = os.path.join(output_dir, 'target_images')
+    os.makedirs(target_images_dir, exist_ok=True)
+    
+    # Save mask images
+    mask_images = target['mask'].detach().cpu().numpy()
+    for i in range(mask_images.shape[0]):
+        mask_img = (mask_images[i] * 255).astype(np.uint8)
+        # Convert single channel to 3-channel RGB image
+        if len(mask_img.shape) == 3 and mask_img.shape[-1] == 1:
+            mask_img = np.repeat(mask_img, 3, axis=-1)
+        elif len(mask_img.shape) == 2:
+            mask_img = np.stack([mask_img, mask_img, mask_img], axis=-1)
+        imageio.imwrite(os.path.join(target_images_dir, f'mask_iter_{iteration:04d}_batch_{i:02d}.png'), mask_img)
+    
+    # Save depth images
+    depth_images = target['depth'].detach().cpu().numpy()
+    for i in range(depth_images.shape[0]):
+        # Normalize depth values to 0-255 range
+        depth_img = depth_images[i]
+        depth_min, depth_max = depth_img.min(), depth_img.max()
+        if depth_max > depth_min:
+            depth_img = (depth_img - depth_min) / (depth_max - depth_min) * 255
+        else:
+            depth_img = np.zeros_like(depth_img)
+        depth_img = depth_img.astype(np.uint8)
+        # Convert single channel to 3-channel RGB image
+        if len(depth_img.shape) == 3 and depth_img.shape[-1] == 1:
+            depth_img = np.repeat(depth_img, 3, axis=-1)
+        elif len(depth_img.shape) == 2:
+            depth_img = np.stack([depth_img, depth_img, depth_img], axis=-1)
+        imageio.imwrite(os.path.join(target_images_dir, f'depth_iter_{iteration:04d}_batch_{i:02d}.png'), depth_img)    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='flexicubes optimization')
     parser.add_argument('-o', '--out_dir', type=str, default=None)
@@ -92,7 +134,7 @@ if __name__ == "__main__":
     # ==============================================================================================   
     
     start_time = time.time()
-    print(f"Now time: {start_time}")
+    print_time_info()
 
     # ==============================================================================================
     #  Train loop
@@ -105,37 +147,7 @@ if __name__ == "__main__":
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
         
         # Save target images to files
-        target_images_dir = os.path.join(FLAGS.out_dir, 'target_images')
-        os.makedirs(target_images_dir, exist_ok=True)
-        
-        # Save mask images
-        mask_images = target['mask'].detach().cpu().numpy()
-        for i in range(mask_images.shape[0]):
-            mask_img = (mask_images[i] * 255).astype(np.uint8)
-            # Convert single channel to 3-channel RGB image
-            if len(mask_img.shape) == 3 and mask_img.shape[-1] == 1:
-                mask_img = np.repeat(mask_img, 3, axis=-1)
-            elif len(mask_img.shape) == 2:
-                mask_img = np.stack([mask_img, mask_img, mask_img], axis=-1)
-            imageio.imwrite(os.path.join(target_images_dir, f'mask_iter_{it:04d}_batch_{i:02d}.png'), mask_img)
-        
-        # Save depth images
-        depth_images = target['depth'].detach().cpu().numpy()
-        for i in range(depth_images.shape[0]):
-            # Normalize depth values to 0-255 range
-            depth_img = depth_images[i]
-            depth_min, depth_max = depth_img.min(), depth_img.max()
-            if depth_max > depth_min:
-                depth_img = (depth_img - depth_min) / (depth_max - depth_min) * 255
-            else:
-                depth_img = np.zeros_like(depth_img)
-            depth_img = depth_img.astype(np.uint8)
-            # Convert single channel to 3-channel RGB image
-            if len(depth_img.shape) == 3 and depth_img.shape[-1] == 1:
-                depth_img = np.repeat(depth_img, 3, axis=-1)
-            elif len(depth_img.shape) == 2:
-                depth_img = np.stack([depth_img, depth_img, depth_img], axis=-1)
-            imageio.imwrite(os.path.join(target_images_dir, f'depth_iter_{it:04d}_batch_{i:02d}.png'), depth_img)
+        save_target_images(target, it, FLAGS.out_dir)
         
 
 
@@ -197,7 +209,7 @@ if __name__ == "__main__":
     # ==============================================================================================
     #  print now time and duration time
     # ==============================================================================================     
-    print(f"Now time: {time.time()}, duration time: {time.time() - start_time}")
+    print_time_info(start_time)
 
     # ==============================================================================================
     #  Save ouput
