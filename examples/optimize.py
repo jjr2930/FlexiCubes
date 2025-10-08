@@ -94,6 +94,7 @@ if __name__ == "__main__":
     
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
+    parser.add_argument('-ss', '--save_step', type=bool, default=False)
     FLAGS = parser.parse_args()
     device = 'cuda'
     
@@ -146,11 +147,9 @@ if __name__ == "__main__":
         # render gt mesh
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
         
-        # Save target images to files
-        save_target_images(target, it, FLAGS.out_dir)
+        if(FLAGS.save_step):# Save target images to files
+            save_target_images(target, it, FLAGS.out_dir)
         
-
-
         # extract and render FlexiCubes mesh
         grid_verts = x_nx3 + (2-1e-8) / (FLAGS.voxel_grid_res * 2) * torch.tanh(deform)
         vertices, faces, L_dev = fc(grid_verts, sdf, cube_fx8, FLAGS.voxel_grid_res, beta_fx12=weight[:,:12], alpha_fx8=weight[:,12:20],
