@@ -23,6 +23,7 @@ from util import *
 import render
 import loss
 import imageio
+from datetime import datetime, timezone, timedelta
 
 import sys
 sys.path.append('..')
@@ -80,6 +81,11 @@ def as_res_vec(res, device):
     if isinstance(res, int):
         return torch.tensor([res, res, res], dtype=torch.float32, device=device)
     return torch.tensor(res, dtype=torch.float32, device=device)
+
+def print_now_time():
+    # utc time +9 (korea) 
+    nowDate = datetime.now(timezone.utc) + timedelta(hours=9)
+    print(f"Now time: {nowDate.strftime('%Y-%m-%d %H:%M:%S')}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='flexicubes optimization')
@@ -140,8 +146,8 @@ if __name__ == "__main__":
     # ==============================================================================================   
     
     start_time = time.time()
-    time_str = time_to_string(start_time)
-    print(f"Now time: {time_str}")
+    print_now_time()
+
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
@@ -214,8 +220,8 @@ if __name__ == "__main__":
     # ==============================================================================================
     #  print now time and duration time
     # ==============================================================================================     
-    duration = time.time() - start_time
-    print(f"Now time: {time_to_string(time.time())}, duration: {time_to_string(duration)}")
+    print_now_time();
+    print(f"duration : {time.time() - start_time}")
 
     # ==============================================================================================
     #  Save ouput
