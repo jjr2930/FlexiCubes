@@ -63,6 +63,9 @@ class CameraMetrixParser:
 
     def as_list(self) -> List[np.ndarray]:
         return list(self.model_view_matrices)
+    
+    def getRandomMatrix(self) -> np.ndarray:
+        return np.random.choice(self.model_view_matrices)
 
 
 if __name__ == "__main__":
