@@ -147,7 +147,7 @@ if __name__ == "__main__":
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
         
         # Save target images to files
-        # save_target_images(target, it, FLAGS.out_dir)
+        save_target_images(target, it, FLAGS.out_dir)
         
 
 
