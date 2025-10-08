@@ -104,6 +104,11 @@ if __name__ == "__main__":
         mask_images = target['mask'].detach().cpu().numpy()
         for i in range(mask_images.shape[0]):
             mask_img = (mask_images[i] * 255).astype(np.uint8)
+            # Convert single channel to 3-channel RGB image
+            if len(mask_img.shape) == 3 and mask_img.shape[-1] == 1:
+                mask_img = np.repeat(mask_img, 3, axis=-1)
+            elif len(mask_img.shape) == 2:
+                mask_img = np.stack([mask_img, mask_img, mask_img], axis=-1)
             imageio.imwrite(os.path.join(target_images_dir, f'mask_iter_{it:04d}_batch_{i:02d}.png'), mask_img)
         
         # Save depth images
@@ -117,6 +122,11 @@ if __name__ == "__main__":
             else:
                 depth_img = np.zeros_like(depth_img)
             depth_img = depth_img.astype(np.uint8)
+            # Convert single channel to 3-channel RGB image
+            if len(depth_img.shape) == 3 and depth_img.shape[-1] == 1:
+                depth_img = np.repeat(depth_img, 3, axis=-1)
+            elif len(depth_img.shape) == 2:
+                depth_img = np.stack([depth_img, depth_img, depth_img], axis=-1)
             imageio.imwrite(os.path.join(target_images_dir, f'depth_iter_{it:04d}_batch_{i:02d}.png'), depth_img)
         
 
