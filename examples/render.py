@@ -45,7 +45,9 @@ def get_random_camera_batch(batch_size, fovy = np.deg2rad(45), iter_res=[512,512
     else:
         def get_random_camera():
             proj_mtx = util.perspective(fovy, iter_res[1] / iter_res[0], cam_near_far[0], cam_near_far[1])
-            mv     = util.translate(0, 0, -cam_radius) @ util.random_rotation_translation(0.25)
+            #mv     = util.translate(0, 0, -cam_radius) @ util.random_rotation_translation(0.25)
+            angle  = np.random.uniform(0, 2 * np.pi)
+            mv     = util.translate(0, 0, -cam_radius) @ util.rotate_y(angle)
             mvp    = proj_mtx @ mv
             return mv, mvp
         mv_batch = []
