@@ -86,7 +86,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--batch', type=int, default=8)
     parser.add_argument('-r', '--train_res', nargs=2, type=int, default=[2048, 2048])
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
-    parser.add_argument('--voxel_grid_res', type=int, default=64)
+    parser.add_argument('--voxel_grid_res', type=int, default=[64,64,64])
     
     parser.add_argument('--sdf_loss', type=bool, default=True)
     parser.add_argument('--develop_reg', type=bool, default=False)
