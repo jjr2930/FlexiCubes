@@ -100,7 +100,6 @@ if __name__ == "__main__":
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
-    parser.add_argument('--cell_size', nargs=3, type=float, default=[1.0, 1.0, 1.0])
 
     FLAGS = parser.parse_args()
     device = 'cuda'
@@ -116,7 +115,7 @@ if __name__ == "__main__":
     #  Create and initialize FlexiCubes
     # ==============================================================================================
     fc = FlexiCubes(device)
-    x_nx3, cube_fx8 = fc.construct_voxel_grid(FLAGS.voxel_grid_res, cell_size=FLAGS.cell_size)
+    x_nx3, cube_fx8 = fc.construct_voxel_grid(FLAGS.voxel_grid_res)
     x_nx3 *= 2 # scale up the grid so that it's larger than the target object
     
     sdf = torch.rand_like(x_nx3[:,0]) - 0.1 # randomly init SDF
