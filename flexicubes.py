@@ -104,7 +104,7 @@ class FlexiCubes:
         self.qef_reg_scale = qef_reg_scale
         self.weight_scale = weight_scale
 
-    def construct_voxel_grid(self, res,  cell_size=(1.0, 1.0, 1.0)):
+    def construct_voxel_grid(self, res):
         """
         Generates a voxel grid based on the specified resolution.
 
@@ -125,9 +125,9 @@ class FlexiCubes:
             res = (res, res, res)
         voxel_grid_template = torch.ones(res, device=self.device)
 
-        res_t = torch.tensor([res], dtype=torch.float, device=self.device)
-        coords = torch.nonzero(voxel_grid_template).float() / res_t  # N, 3
-        verts = (self.cube_corners.unsqueeze(0) / res_t + coords.unsqueeze(1)).reshape(-1, 3)
+        res = torch.tensor([res], dtype=torch.float, device=self.device)
+        coords = torch.nonzero(voxel_grid_template).float() / res  # N, 3
+        verts = (self.cube_corners.unsqueeze(0) / res + coords.unsqueeze(1)).reshape(-1, 3)
         cubes = (base_cube_f.unsqueeze(0) +
                  torch.arange(coords.shape[0], device=self.device).unsqueeze(1) * 8).reshape(-1)
 
@@ -135,10 +135,7 @@ class FlexiCubes:
         verts_unique, inverse_indices = torch.unique(verts_rounded, dim=0, return_inverse=True)
         cubes = inverse_indices[cubes.reshape(-1)].reshape(-1, 8)
 
-        base_verts = verts_unique - 0.5
-        cell_size_t = torch.tensor(cell_size, dtype=torch.float32, device=self.device)
-        verts_scaled = base_verts * cell_size_t
-        return verts_scaled, cubes
+        return verts_unique - 0.5, cubes
 
     def __call__(self, x_nx3, s_n, cube_fx8, res, beta_fx12=None, alpha_fx8=None,
                  gamma_f=None, training=False, output_tetmesh=False, grad_func=None):
