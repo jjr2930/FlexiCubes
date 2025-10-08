@@ -58,7 +58,7 @@ def get_random_camera_batch(batch_size, fovy = np.deg2rad(45), iter_res=[512,512
 
         camera_matrix_parser = CameraMetrixParser.CameraMetrixParser(os.path.join(os.path.dirname(__file__), "data", "inputmodels", "CameraModelViewMatrix.json"))
         random_mv_np = camera_matrix_parser.getRandomMatrix()  # numpy (4x4)
-        proj_mtx = util.perspective(fovy, iter_res[1] / iter_res[0], cam_near_far[0], cam_near_far[1])  # torch (4x4)
+        proj_mtx = util.perspective(fovy, iter_res[1] / iter_res[0], cam_near_far[0], cam_near_far[1], device=device)  # torch (4x4) on target device
         random_mv = torch.tensor(random_mv_np, dtype=proj_mtx.dtype, device=device)
         mvp = proj_mtx @ random_mv
         mv_batch.append(random_mv)
