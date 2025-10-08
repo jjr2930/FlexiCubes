@@ -65,7 +65,10 @@ class CameraMetrixParser:
         return list(self.model_view_matrices)
     
     def getRandomMatrix(self) -> np.ndarray:
-        return np.random.choice(self.model_view_matrices)
+        if not self.model_view_matrices:
+            raise ValueError("No model-view matrices loaded")
+        idx = np.random.randint(0, len(self.model_view_matrices))
+        return self.model_view_matrices[idx]
 
 
 if __name__ == "__main__":
