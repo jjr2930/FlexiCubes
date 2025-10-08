@@ -23,7 +23,7 @@ class CameraMetrixParser:
         if not os.path.exists(self.json_path):
             raise FileNotFoundError(f"JSON file not found: {self.json_path}")
 
-        with open(self.json_path, "r", encoding="utf-8") as f:
+        with open(self.json_path, "r", encoding="utf-8-sig") as f:
             data = json.load(f)
 
         if "modelViewMatrix" not in data or not isinstance(data["modelViewMatrix"], list):
