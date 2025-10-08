@@ -77,6 +77,11 @@ def save_target_images(target, iteration, output_dir):
             depth_img = np.stack([depth_img, depth_img, depth_img], axis=-1)
         imageio.imwrite(os.path.join(target_images_dir, f'depth_iter_{iteration:04d}_batch_{i:02d}.png'), depth_img)    
 
+def as_res_vec(res, device):
+    if isinstance(res, int):
+        return torch.tensor([res, res, res], dtype=torch.float32, device=device)
+    return torch.tensor(res, dtype=torch.float32, device=device)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='flexicubes optimization')
     parser.add_argument('-o', '--out_dir', type=str, default=None)
@@ -153,7 +158,8 @@ if __name__ == "__main__":
             save_target_images(target, it, FLAGS.out_dir)
         
         # extract and render FlexiCubes mesh
-        grid_verts = x_nx3 + (2-1e-8) / (FLAGS.voxel_grid_res * 2) * torch.tanh(deform)
+        voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
+        grid_verts = x_nx3 + (2-1e-8) / (voxel_res * 2) * torch.tanh(deform)
         vertices, faces, L_dev = fc(grid_verts, sdf, cube_fx8, FLAGS.voxel_grid_res, beta_fx12=weight[:,:12], alpha_fx8=weight[:,12:20],
             gamma_f=weight[:,20], training=True)
         flexicubes_mesh = Mesh(vertices, faces)
