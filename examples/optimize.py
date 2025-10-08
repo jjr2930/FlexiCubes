@@ -35,13 +35,11 @@ from flexicubes import FlexiCubes
 def lr_schedule(iter):
     return max(0.0, 10**(-(iter)*0.0002)) # Exponential falloff from [1.0, 0.1] over 5k epochs.    
 
-def print_time_info(start_time=None):
-    current_time = time.time()
-    if start_time is not None:
-        duration = current_time - start_time
-        print(f"Now time: {current_time}, duration time: {duration}")
-    else:
-        print(f"Now time: {current_time}")
+def time_to_string(time):
+    h = time // 3600
+    m = (time % 3600) // 60
+    s = time % 60
+    return f"{h:02d}:{m:02d}:{s:02d}"
 
 def save_target_images(target, iteration, output_dir):
     """Save target mask and depth images to files"""
@@ -141,8 +139,8 @@ if __name__ == "__main__":
     # ==============================================================================================   
     
     start_time = time.time()
-    print_time_info()
-
+    time_str = time_to_string(start_time)
+    print(f"Now time: {time_str}")
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
@@ -215,7 +213,8 @@ if __name__ == "__main__":
     # ==============================================================================================
     #  print now time and duration time
     # ==============================================================================================     
-    print_time_info(start_time)
+    duration = time.time() - start_time
+    print(f"Now time: {time_to_string(time.time())}, duration: {time_to_string(duration)}")
 
     # ==============================================================================================
     #  Save ouput
