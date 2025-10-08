@@ -37,7 +37,7 @@ def lr_schedule(iter):
 
 def time_to_string(seconds):
     seconds = int(seconds)
-    h = seconds // 3600
+    h = (seconds % 86400) // 3600
     m = (seconds % 3600) // 60
     s = seconds % 60
     return f"{h:02d}:{m:02d}:{s:02d}"
