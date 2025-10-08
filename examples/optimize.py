@@ -18,6 +18,7 @@ import torch
 import nvdiffrast.torch as dr
 import trimesh
 import os
+import time
 from util import *
 import render
 import loss
@@ -86,6 +87,13 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam([sdf, weight,deform], lr=FLAGS.learning_rate)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: lr_schedule(x)) 
     
+    # ==============================================================================================
+    #  print now time
+    # ==============================================================================================   
+    
+    start_time = time.time()
+    print(f"Now time: {start_time}")
+
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
@@ -187,7 +195,13 @@ if __name__ == "__main__":
                 print(f"Optimization Step [{it}/{FLAGS.iter}], Loss: {total_loss.item():.4f}")
             
     # ==============================================================================================
+    #  print now time and duration time
+    # ==============================================================================================     
+    print(f"Now time: {time.time()}, duration time: {time.time() - start_time}")
+
+    # ==============================================================================================
     #  Save ouput
     # ==============================================================================================     
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
     mesh_np.export(os.path.join(FLAGS.out_dir, 'output_mesh.obj'))
+
