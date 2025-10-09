@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
             vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
             vertex_coord = gt_mesh.vertices[vertex_index]   # 해당 정점의 좌표 (Tensor)
-            mv, mvp = render.get_random_camera_batch_custom(FLAGS.batch, iter_res=FLAGS.train_res, position=vertex_coord.numpy(),device=device)
+            mv, mvp = render.get_random_camera_batch_custom(FLAGS.batch, iter_res=FLAGS.train_res, position=vertex_coord.cpu().numpy(),device=device)
         
         # render gt mesh
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
