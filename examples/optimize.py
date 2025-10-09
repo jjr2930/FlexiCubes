@@ -28,6 +28,7 @@ from datetime import datetime, timezone, timedelta
 import sys
 sys.path.append('..')
 from flexicubes import FlexiCubes
+import random
 
 ###############################################################################
 # Functions adapted from https://github.com/NVlabs/nvdiffrec
@@ -105,6 +106,7 @@ if __name__ == "__main__":
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
+    parser.add_argument('-fc', '--focus_count', type=int, default= 0 )
 
     FLAGS = parser.parse_args()
     device = 'cuda'
@@ -154,7 +156,20 @@ if __name__ == "__main__":
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
         # sample random camera poses
-        mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
+        if it < FLAGS.focus_count :
+            mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
+        else :
+            #target triangle index is  22446, 58980
+            triangleIndex:int = 0
+            if it % 2 == 0:
+                triangleIndex = 22446
+            else : 
+                triangleIndex = 58980                                
+
+            vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
+            vertex_coord = gt_mesh.vertices[vertex_index]   # 해당 정점의 좌표 (Tensor)
+            mv, mvp = render.get_random_camera_batch_custom(FLAGS.batch, iter_res=FLAGS.train_res, position=vertex_coord.numpy(),device=device)
+        
         # render gt mesh
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
         
