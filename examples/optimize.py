@@ -169,9 +169,9 @@ if __name__ == "__main__":
             num_faces = gt_mesh.faces.shape[0]
             triangleIndex:int = 0
             if it % 2 == 0:
-                triangleIndex = min(7640, num_faces - 1)
+                triangleIndex = min(3364, num_faces - 1)
             else : 
-                triangleIndex = min(19683, num_faces - 1)                                
+                triangleIndex = min(7009, num_faces - 1)                                
 
             vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
             vertex_coord = gt_mesh.vertices[vertex_index]   # 해당 정점의 좌표 (Tensor)
