@@ -251,5 +251,5 @@ if __name__ == "__main__":
     #  Save ouput
     # ==============================================================================================     
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
-    mesh_np.export(os.path.join(FLAGS.out_dir, f'girdres {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | lr {FLAGS.learning_rate} | fc {FLAGS.focus_count} | tr {FLAGS.train_res}.obj'))
+    mesh_np.export(os.path.join(FLAGS.out_dir, f'gird_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | lr {FLAGS.learning_rate} | fc {FLAGS.focus_count} | train_res {FLAGS.train_res}.obj'))
 
