@@ -82,7 +82,7 @@ class Mesh:
         self.nrm = nrm
 
 def load_mesh(path, device):
-    mesh_np = trimesh.load(path)
+    mesh_np = trimesh.load(path, process=False)
     vertices = torch.tensor(mesh_np.vertices, device=device, dtype=torch.float)
     faces = torch.tensor(mesh_np.faces, device=device, dtype=torch.long)
     
