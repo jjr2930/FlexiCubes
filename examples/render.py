@@ -40,8 +40,23 @@ def get_random_camera_batch_custom(batch_size, fovy = np.deg2rad(45), iter_res=[
             # mv     = origin_position @ translateMatrix @ rotationMatrix
             #mv     = origin_position  @ translateMatrix
             #mv     =  rotationMatrix
-            mv     = util.viewMatrix(origin_position @ translateMatrix, origin_position, upvector, device=device)
-            mvp    = proj_mtx @ mv
+            # mv     = util.viewMatrix(origin_position @ translateMatrix, origin_position, upvector, device=device)
+            # mvp    = proj_mtx @ mv
+
+                        
+            # position을 torch tensor로 변환
+            target_pos = torch.tensor(position, dtype=torch.float32, device=device)
+            
+            # 카메라 위치 설정 (타겟에서 cam_radius만큼 떨어진 랜덤 위치)
+            camera_offset = util.random_rotation_translation(0, device=device)[:3, 2] * cam_radius
+            camera_pos = target_pos + camera_offset
+            
+            upvector = torch.tensor([0, 1, 0], dtype=torch.float32, device=device)
+            
+            # viewMatrix 함수에 올바른 3D 벡터들 전달
+            mv = util.viewMatrix(camera_pos, target_pos, upvector, device=device)
+            mvp = proj_mtx @ mv
+
             mv_batch.append(mv)
             mvp_batch.append(mvp)
         
