@@ -160,11 +160,13 @@ if __name__ == "__main__":
             mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
         else :
             #target triangle index is  22446, 58980
+            # 먼저 메시의 면 개수를 확인하고 안전한 인덱스 사용
+            num_faces = gt_mesh.faces.shape[0]
             triangleIndex:int = 0
             if it % 2 == 0:
-                triangleIndex = 22446
+                triangleIndex = min(22446, num_faces - 1)
             else : 
-                triangleIndex = 58980                                
+                triangleIndex = min(58980, num_faces - 1)                                
 
             vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
             vertex_coord = gt_mesh.vertices[vertex_index]   # 해당 정점의 좌표 (Tensor)
