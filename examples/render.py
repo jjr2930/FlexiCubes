@@ -27,7 +27,7 @@ import CameraMetrixParser
 ###############################################################################
 # Functions adapted from https://github.com/NVlabs/nvdiffrec
 ###############################################################################
-def get_random_camera_batch_custom(batch_size, fovy = np.deg2rad(45), iter_res=[512,512], cam_near_far=[0.1, 1000.0], cam_radius=3.0, position= np.zeros(3), device="cuda"):
+def get_random_camera_batch_custom(batch_size, fovy = np.deg2rad(45), iter_res=[512,512], cam_near_far=[0.1, 1000.0], cam_radius=0.5, position= np.zeros(3), device="cuda"):
         mv_batch = []
         mvp_batch = []
 
