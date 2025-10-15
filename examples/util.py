@@ -83,8 +83,11 @@ class Mesh:
 
 def load_mesh(path, device):
     mesh_np = trimesh.load(path, process=False)
-    vertices = torch.tensor(mesh_np.vertices, device=device, dtype=torch.float)
+    vertices = torch.tensor(mesh_np.vertices, device=device, dtype=torch.float)    
     faces = torch.tensor(mesh_np.faces, device=device, dtype=torch.long)
+    #면 과 정점 갯수 출력
+    print(f"Loaded mesh from {path}, #faces: {faces.shape[0]}, #vertices: {vertices.shape[0]}")
+    
     
     # Normalize
     vmin, vmax = vertices.min(dim=0)[0], vertices.max(dim=0)[0]
