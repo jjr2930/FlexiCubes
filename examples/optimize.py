@@ -149,6 +149,11 @@ if __name__ == "__main__":
     
     start_time = time.time()
     print_now_time()
+    
+    #삼각형의 총갯수와 버텍스의 총갯수 출력
+    num_faces = gt_mesh.faces.shape[0]
+    num_vertices = gt_mesh.vertices.shape[0]
+    print(f"num_faces : {num_faces}, num_vertices : {num_vertices}")
 
     # ==============================================================================================
     #  Train loop
