@@ -37,7 +37,7 @@ def get_random_camera_batch_custom(batch_size, fovy = np.deg2rad(45), iter_res=[
             translateMatrix = util.translate(0, 0, -cam_radius, device=device)
             rotationMatrix = util.random_rotation_translation(1, device=device)
             #mv     = origin_position @ translateMatrix @ rotationMatrix
-            mv     = origin_position @ rotationMatrix
+            mv     = origin_position @ rotationMatrix @ translateMatrix
             #mv     =  rotationMatrix
             mvp    = proj_mtx @ mv
             mv_batch.append(mv)
