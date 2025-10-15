@@ -153,7 +153,7 @@ if __name__ == "__main__":
     #삼각형의 총갯수와 버텍스의 총갯수 출력
     num_faces = gt_mesh.faces.shape[0]
     num_vertices = gt_mesh.vertices.shape[0]
-    print(f"num_faces : {num_faces}, num_vertices : {num_vertices}")
+    # print(f"num_faces : {num_faces}, num_vertices : {num_vertices}")
 
     # ==============================================================================================
     #  Train loop
@@ -175,7 +175,7 @@ if __name__ == "__main__":
 
             vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
             vertex_coord = gt_mesh.vertices[vertex_index]   # 해당 정점의 좌표 (Tensor)
-            print(f"it : {it}, triangleIndex : {triangleIndex}, vertex_index : {vertex_index}, vertex_coord : {vertex_coord}");
+            # print(f"it : {it}, triangleIndex : {triangleIndex}, vertex_index : {vertex_index}, vertex_coord : {vertex_coord}");
 
             mv, mvp = render.get_random_camera_batch_custom(FLAGS.batch, iter_res=FLAGS.train_res, position=vertex_coord.cpu().numpy(),device=device)
         
