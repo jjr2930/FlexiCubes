@@ -169,7 +169,7 @@ if __name__ == "__main__":
             num_faces = gt_mesh.faces.shape[0]
             triangleIndex:int = 0
             if it % 2 == 0:
-                triangleIndex = min(3364, num_faces - 1)
+                triangleIndex = min(19443, num_faces - 1)
             else : 
                 triangleIndex = min(7009, num_faces - 1)                                
 
