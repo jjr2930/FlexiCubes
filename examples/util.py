@@ -69,6 +69,17 @@ def rotate_y(a, device=None):
                          [-s, 0, c, 0], 
                          [ 0, 0, 0, 1]], dtype=torch.float32, device=device)
     
+def viewMatrix(eye, at, up, device=None):
+    zaxis = safe_normalize(eye - at)
+    xaxis = safe_normalize(torch.cross(up, zaxis))
+    yaxis = torch.cross(zaxis, xaxis)
+    m = torch.eye(4, device=device)
+    m[0, :3] = xaxis
+    m[1, :3] = yaxis
+    m[2, :3] = zaxis
+    m[:3, 3] = -torch.matmul(m[:3, :3], eye)
+    return m
+
 class Mesh:
     def __init__(self, vertices, faces):
         self.vertices = vertices
