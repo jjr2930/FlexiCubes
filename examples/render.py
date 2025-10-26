@@ -198,7 +198,7 @@ def render_from_images(rgb_image, mask_image, depth_image, return_types = ["mask
     Args:
         rgb_image: RGB 이미지 텐서 [H, W, 3] 또는 [1, H, W, 3]
         mask_image: 마스크 이미지 텐서 [H, W, 1] 또는 [1, H, W, 1], 값은 [0, 1] 범위
-        depth_image: Depth 이미지 텐서 [H, W, 4] 또는 [1, H, W, 4] (homogeneous coordinates)
+            depth_image: Depth 이미지 텐서 [H, W, 1] 또는 [1, H, W, 1] (Z값만, 실제 카메라 공간 depth)
         return_types: 반환할 타입 리스트 (예: ["mask", "depth", "rgb"])
         white_bg: True일 경우 배경을 흰색으로 처리
         

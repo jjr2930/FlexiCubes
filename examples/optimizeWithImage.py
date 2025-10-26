@@ -128,7 +128,13 @@ if __name__ == "__main__":
     x_nx3, cube_fx8 = fc.construct_voxel_grid(FLAGS.voxel_grid_res)
     x_nx3 *= 2 # scale up the grid so that it's larger than the target object
     
-    sdf = torch.rand_like(x_nx3[:,0]) - 0.1 # randomly init SDF
+        # Initialize SDF as a sphere for more stable convergence
+        # SDF = distance_from_center - radius (negative inside, positive outside)
+        center = torch.zeros(3, device=device)
+        radius = 0.5
+        distances = torch.norm(x_nx3 - center, dim=1)
+        sdf = distances - radius  # Sphere SDF
+    
     sdf    = torch.nn.Parameter(sdf.clone().detach(), requires_grad=True)
     # set per-cube learnable weights to zeros
     weight = torch.zeros((cube_fx8.shape[0], 21), dtype=torch.float, device='cuda') 
@@ -168,7 +174,9 @@ if __name__ == "__main__":
         for item in randomRenderingInfo:
             mv.append(item.to_torch_matrix(device=device))
             mvp.append(projectionMatrixList @ item.to_torch_matrix(device=device))
-            target.append(item.to_pipeline_dict(FLAGS.working_directory))
+                target.append(item.to_pipeline_dict(FLAGS.working_directory, 
+                                                   near_clip=renderedImage.near_clip, 
+                                                   far_clip=renderedImage.far_clip))
             
         mv = torch.stack(mv,0)
         mvp = torch.stack(mvp,0)
