@@ -107,6 +107,11 @@ if __name__ == "__main__":
             view_max_y = valid_view[:, 1].max()
             view_min_z = valid_view[:, 2].min()
             view_max_z = valid_view[:, 2].max()
+            
+            # 디버깅: min/max 값 출력
+            print(f"  X range: [{view_min_x:.4f}, {view_max_x:.4f}]")
+            print(f"  Y range: [{view_min_y:.4f}, {view_max_y:.4f}]")
+            print(f"  Z range: [{view_min_z:.4f}, {view_max_z:.4f}]")
         else:
             print('No valid view pixels found.')
             # 유효한 픽셀이 없는 경우 기본값 사용
@@ -117,11 +122,12 @@ if __name__ == "__main__":
         def normalize_channel(channel, min_val, max_val):
             return (channel - min_val) / (max_val - min_val + 1e-8)
         
-        # 각 채널 정규화
+        # 각 채널 정규화 (RGB만, 알파 채널은 제외)
         view_norm = np.zeros_like(view)
         view_norm[:, 0] = normalize_channel(view[:, 0], view_min_x, view_max_x)
         view_norm[:, 1] = normalize_channel(view[:, 1], view_min_y, view_max_y)
         view_norm[:, 2] = normalize_channel(view[:, 2], view_min_z, view_max_z)
+        view_norm[:, 3] = 1.0  # 알파 채널은 1.0으로 설정 (완전 불투명)
 
         # 파일 저장
         view_path = os.path.join(FLAGS.out_dir, f"view_{i:03d}.png")
