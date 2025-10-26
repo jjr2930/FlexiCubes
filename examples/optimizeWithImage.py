@@ -167,7 +167,7 @@ if __name__ == "__main__":
         for item in randomRenderingInfo:
             mv.append(item.to_torch_matrix(device=device))
             mvp.append(projectionMatrixList @ item.to_torch_matrix(device=device))
-            target.append(item.to_pipeline_dict())
+            target.append(item.to_pipeline_dict(FLAGS.working_directory))
             
         mv = torch.stack(mv,0)
         mvp = torch.stack(mvp,0)
