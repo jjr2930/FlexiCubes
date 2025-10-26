@@ -100,6 +100,11 @@ if __name__ == "__main__":
     parser.add_argument('--mask_weight', type=float, default=10.0)
     parser.add_argument('--depth_weight', type=float, default=10.0)
     parser.add_argument('--downsample_factor', type=int, default=1, help='Compute loss on lower res for stronger gradients (e.g., 4)')
+    # Camera/matrix fixes and global transform
+    parser.add_argument('--mv_fix', type=str, default='none', choices=['none','transpose','inverse','inverse_transpose'], help='Apply fix to Unity model-view matrix')
+    parser.add_argument('--compose_mode', type=str, default='post', choices=['post','pre'], help='Compose model transform with MV: post => MV@M, pre => M@MV')
+    parser.add_argument('--opt_translate', type=bool, default=True, help='Optimize global translation of the model')
+    parser.add_argument('--opt_scale', type=bool, default=False, help='Optimize global uniform scale of the model')
     parser.add_argument('--voxel_grid_res',nargs=3, type=int, default=[64,64,64])
     
     parser.add_argument('--sdf_loss', type=bool, default=False)  # 이미지 기반 복원에서는 GT 메시가 없으므로 False
@@ -153,7 +158,17 @@ if __name__ == "__main__":
     # ==============================================================================================
     #  Setup optimizer
     # ==============================================================================================
-    optimizer = torch.optim.Adam([sdf, weight,deform], lr=FLAGS.learning_rate)
+    # Learnable global transform parameters
+    trans = torch.nn.Parameter(torch.zeros(3, device=device), requires_grad=FLAGS.opt_translate)
+    scale = torch.nn.Parameter(torch.tensor(1.0, device=device), requires_grad=FLAGS.opt_scale)
+
+    params = [sdf, weight, deform]
+    if FLAGS.opt_translate:
+        params.append(trans)
+    if FLAGS.opt_scale:
+        params.append(scale)
+
+    optimizer = torch.optim.Adam(params, lr=FLAGS.learning_rate)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: lr_schedule(x)) 
     
     # ==============================================================================================
@@ -164,6 +179,32 @@ if __name__ == "__main__":
     print_now_time()
     
     renderedImage = rendering_data_parser.load_camera_dataset(FLAGS.rendering_info)
+
+    def apply_mv_fix(mv_batch: torch.Tensor) -> torch.Tensor:
+        # mv_batch: [B,4,4]
+        if FLAGS.mv_fix == 'none':
+            return mv_batch
+        elif FLAGS.mv_fix == 'transpose':
+            return mv_batch.transpose(1,2)
+        elif FLAGS.mv_fix == 'inverse':
+            return torch.inverse(mv_batch)
+        elif FLAGS.mv_fix == 'inverse_transpose':
+            return torch.inverse(mv_batch).transpose(1,2)
+        else:
+            return mv_batch
+
+    def make_model_matrix(B: int, device: str) -> torch.Tensor:
+        # Build 4x4 model matrix from trans/scale
+        s = scale if FLAGS.opt_scale else torch.tensor(1.0, device=device)
+        t = trans if FLAGS.opt_translate else torch.zeros(3, device=device)
+        M = torch.eye(4, device=device).unsqueeze(0).repeat(B,1,1)
+        M[:,0,0] = s
+        M[:,1,1] = s
+        M[:,2,2] = s
+        M[:,0,3] = t[0]
+        M[:,1,3] = t[1]
+        M[:,2,3] = t[2]
+        return M
     
     # ==============================================================================================
     #  Train loop
@@ -171,19 +212,29 @@ if __name__ == "__main__":
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
         randomRenderingInfo = renderedImage.get_random_items(FLAGS.batch)
-        projectionMatrixList = renderedImage.get_torch_projection_matrix(device=device)
+        proj = renderedImage.get_torch_projection_matrix(device=device)  # [4,4]
         mv = []
-        mvp = []
+        # mvp will be recomputed after mv fix and model composition
         target = []
         for item in randomRenderingInfo:
             mv.append(item.to_torch_matrix(device=device))
-            mvp.append(projectionMatrixList @ item.to_torch_matrix(device=device))
             target.append(item.to_pipeline_dict(FLAGS.working_directory, 
                                                 near_clip=renderedImage.near_clip, 
                                                 far_clip=renderedImage.far_clip))
             
         mv = torch.stack(mv,0)
-        mvp = torch.stack(mvp,0)
+        # Apply possible mv fix (transpose/inverse)
+        mv = apply_mv_fix(mv)
+        # Compose with model transform
+        B = mv.shape[0]
+        M_model = make_model_matrix(B, device)
+        if FLAGS.compose_mode == 'post':
+            mv_adj = torch.bmm(mv, M_model)
+        else:
+            mv_adj = torch.bmm(M_model, mv)
+        # Recompute mvp = proj @ mv_adj (batch)
+        proj_b = proj.unsqueeze(0).repeat(B,1,1)
+        mvp = torch.bmm(proj_b, mv_adj)
         target = {
             'mask': torch.stack([t['mask'] for t in target],0).to(device),
             'depth': torch.stack([t['depth'] for t in target],0).to(device)
@@ -195,6 +246,7 @@ if __name__ == "__main__":
             print(f"DEBUG - mvp shape: {mvp.shape}")
             print(f"DEBUG - target['mask'] shape: {target['mask'].shape}")
             print(f"DEBUG - target['depth'] shape: {target['depth'].shape}")
+            print(f"DEBUG - trans: {trans.detach().cpu().numpy()} scale: {scale.item() if FLAGS.opt_scale else 1.0}")
             if FLAGS.save_step:
                 save_target_images(target, it, FLAGS.out_dir)
 
