@@ -99,6 +99,7 @@ if __name__ == "__main__":
         valid_view = view[valid_mask]  # [N, 4]
         
         if len(valid_view) > 0:
+            print("valid")
             # 0이 아닌 값들만 필터링 (각 채널별로 독립적으로)
             # Y와 Z가 음수 범위이므로, 절댓값이 작은 값들(0에 가까운 값)을 제외
             threshold = 1e-3
@@ -130,6 +131,7 @@ if __name__ == "__main__":
                 view_min_z = valid_z.min()
                 view_max_z = valid_z.max()
         else:
+            print("no valid")
             # 유효한 픽셀이 없는 경우 전체 범위 사용
             view_min_x = view[:, :, 0].min()
             view_max_x = view[:, :, 0].max()
