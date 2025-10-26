@@ -48,9 +48,17 @@ class CameraItem:
 		return torch.from_numpy(np.array(img)).float() / 255.0
 	
 	def to_pipeline_dict(self, working_directory: str):
-		return render.render_from_images(self.load_rgb_image(working_directory=working_directory), 
-								   self.load_mask_image(working_directory=working_directory), 
-								   self.load_depth_image(working_directory=working_directory))
+		"""이미지를 로드하고 배치 차원 없이 반환 (나중에 torch.stack으로 쌓음)."""
+		result = render.render_from_images(
+			self.load_rgb_image(working_directory=working_directory), 
+			self.load_mask_image(working_directory=working_directory), 
+			self.load_depth_image(working_directory=working_directory)
+		)
+		# render_from_images가 [1, H, W, C] 형태로 반환하므로 배치 차원 제거
+		return {
+			'mask': result['mask'].squeeze(0),   # [H, W, 1]
+			'depth': result['depth'].squeeze(0)  # [H, W, 4]
+		}
 
 
 @dataclass(frozen=True)
