@@ -92,21 +92,33 @@ if __name__ == "__main__":
         torch.cuda.empty_cache()
 
         #view -> 뷰 공간 좌표계로 변환된 좌표들이야 나는 이걸 0~1 사이로 정규화된 값으로 바꾸고싶다구
-        # 전체 view에서 X, Y, Z 좌표의 min, max 구하기
-        view_min_x = view[:, :, 0].min()
-        view_max_x = view[:, :, 0].max()
-        view_min_y = view[:, :, 1].min()
-        view_max_y = view[:, :, 1].max()
-        view_min_z = view[:, :, 2].min()
-        view_max_z = view[:, :, 2].max()
+        # 마스크 영역만 사용하여 min, max 계산 (배경 제외)
+        valid_mask = mask[..., 0] >= 0.1  # [H, W]
+        
+        # 유효한 영역의 view 좌표만 추출
+        valid_view = view[valid_mask]  # [N, 4]
+        
+        if len(valid_view) > 0:
+            # X, Y, Z 좌표에서 min, max 구하기
+            view_min_x = valid_view[:, 0].min()
+            view_max_x = valid_view[:, 0].max()
+            view_min_y = valid_view[:, 1].min()
+            view_max_y = valid_view[:, 1].max()
+            view_min_z = valid_view[:, 2].min()
+            view_max_z = valid_view[:, 2].max()
+        else:
+            # 유효한 픽셀이 없는 경우 전체 범위 사용
+            view_min_x = view[:, :, 0].min()
+            view_max_x = view[:, :, 0].max()
+            view_min_y = view[:, :, 1].min()
+            view_max_y = view[:, :, 1].max()
+            view_min_z = view[:, :, 2].min()
+            view_max_z = view[:, :, 2].max()
         
         # 디버깅: min/max 값 출력
         print(f"  X range: [{view_min_x:.4f}, {view_max_x:.4f}]")
         print(f"  Y range: [{view_min_y:.4f}, {view_max_y:.4f}]")
         print(f"  Z range: [{view_min_z:.4f}, {view_max_z:.4f}]")
-        
-        # 마스크 정보
-        valid_mask = mask[..., 0] >= 0.1  # [H, W]
 
         # 정규화 함수
         def normalize_channel(channel, min_val, max_val):
