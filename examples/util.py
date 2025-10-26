@@ -194,3 +194,23 @@ def ndc_image_to_view_space(ndc_image, depth_image, fovy, resWidth, resHeight, n
     view_space_coords = view_space_coords_flat.view(H, W, 4)  # [H, W, 4]
 
     return view_space_coords
+
+def recorver_view_position(normalized_view, mask, min_x, max_x, min_y, max_y, min_z, max_z):
+    """
+    정규화된 뷰 공간 좌표를 원래 뷰 공간 좌표로 복원
+    normalized_view: [H, W, x,y,z,w] 0~1 사이로 정규화된 뷰 공간 좌표
+    mask: [H, W, 1] 마스크 이미지
+    min_x, max_x, min_y, max_y, min_z, max_z: 각 축의 최소/최대 값
+    Returns: 복원된 뷰 공간 좌표 [H, W, x,y,z,w]
+    """
+    view = torch.zeros_like(normalized_view)
+
+    # 마스크가 있는 영역에서만 복원 수행
+    valid_mask = mask[..., 0] >= 0.1  # [H, W]
+
+    # X, Y, Z 좌표 복원 (마스크 영역만)
+    view[valid_mask, 0] = normalized_view[valid_mask, 0] * (max_x - min_x) + min_x
+    view[valid_mask, 1] = normalized_view[valid_mask, 1] * (max_y - min_y) + min_y
+    view[valid_mask, 2] = normalized_view[valid_mask, 2] * (max_z - min_z) + min_z
+
+    return view

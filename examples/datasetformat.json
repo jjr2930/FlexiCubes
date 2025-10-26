@@ -6,17 +6,17 @@
     "far": 10.0,
     "data":[
         {
-            "depth_min_x" : -1.0,
-            "depth_min_y" : -1.0,
-            "depth_min_z" : -1.0,
-            "depth_max_x" : -1.0,
-            "depth_max_y" : -1.0,
-            "depth_max_z" : -1.0,
+            "view_min_x" : -1.0,
+            "view_min_y" : -1.0,
+            "view_min_z" : -1.0,
+            "view_max_x" : -1.0,
+            "view_max_y" : -1.0,
+            "view_max_z" : -1.0,
             "mv" : [[1.0, 0.0, 0.0, 0.0],
                     [0.0, 1.0, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 3.0],
                     [0.0, 0.0, 0.0, 1.0]],
-            "depth_path" : "testDepth.png",
+            "view_path" : "testView.png",
             "mask_path" :  "testMask.png"
         }
     ]

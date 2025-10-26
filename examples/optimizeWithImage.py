@@ -187,51 +187,6 @@ if __name__ == "__main__":
     start_time = time.time()
     print_now_time()
     
-    
-    def apply_mv_fix(mv_batch: torch.Tensor) -> torch.Tensor:
-        # mv_batch: [B,4,4]
-        if FLAGS.mv_fix == 'none':
-            return mv_batch
-        elif FLAGS.mv_fix == 'transpose':
-            return mv_batch.transpose(1,2)
-        elif FLAGS.mv_fix == 'inverse':
-            return torch.inverse(mv_batch)
-        elif FLAGS.mv_fix == 'inverse_transpose':
-            return torch.inverse(mv_batch).transpose(1,2)
-        else:
-            return mv_batch
-
-    def _euler_to_matrix(rx, ry, rz):
-        cx, sx = torch.cos(rx), torch.sin(rx)
-        cy, sy = torch.cos(ry), torch.sin(ry)
-        cz, sz = torch.cos(rz), torch.sin(rz)
-        # Rotation order: Rz @ Ry @ Rx
-        Rx = torch.tensor([[1, 0, 0], [0, cx, -sx], [0, sx, cx]], dtype=torch.float32, device=device)
-        Ry = torch.tensor([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]], dtype=torch.float32, device=device)
-        Rz = torch.tensor([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]], dtype=torch.float32, device=device)
-        R = Rz @ Ry @ Rx
-        return R
-
-    def make_model_matrix(B: int, device: str) -> torch.Tensor:
-        # Build 4x4 model matrix from trans/scale/rotation
-        s = scale if FLAGS.opt_scale else torch.tensor(1.0, device=device)
-        t = trans if FLAGS.opt_translate else torch.zeros(3, device=device)
-        if FLAGS.opt_rotate:
-            R = _euler_to_matrix(rot_euler[0], rot_euler[1], rot_euler[2])  # [3,3]
-        else:
-            R = torch.eye(3, device=device)
-
-        RS = R * s  # uniform scale
-        M = torch.eye(4, device=device).unsqueeze(0).repeat(B,1,1)
-        M[:,0:3,0:3] = RS
-        M[:,0:3,3] = t
-        if FLAGS.z_flip:
-            # Post-multiply by Z-flip on model (reflect Z axis)
-            F = torch.eye(4, device=device)
-            F[2,2] = -1.0
-            M = torch.bmm(M, F.unsqueeze(0).repeat(B,1,1))
-        return M
-    
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
@@ -239,7 +194,8 @@ if __name__ == "__main__":
         optimizer.zero_grad()
 
         proj = perspective(fovy=np.deg2rad(fov), aspect=res_width/res_height, n=near_clip, f=far_clip, device=device)
-        mv = []
+        mv_batch = []
+        mvp_batch = []
         # mvp will be recomputed after mv fix and model composition
         target = []
 
@@ -247,38 +203,34 @@ if __name__ == "__main__":
         random_data = random.sample(data, FLAGS.batch)
 
         for item in random_data:
-            mv.append(item.to_torch_matrix(device=device))
-            target.append(item.to_pipeline_dict(FLAGS.working_directory, 
-                                                near_clip=renderedImage.near_clip, 
-                                                far_clip=renderedImage.far_clip))
-            
-        mv = torch.stack(mv,0)
-        # Apply possible mv fix (transpose/inverse)
-        mv = apply_mv_fix(mv)
-        # Compose with model transform
-        B = mv.shape[0]
-        M_model = make_model_matrix(B, device)
-        if FLAGS.compose_mode == 'post':
-            mv_adj = torch.bmm(mv, M_model)
-        else:
-            mv_adj = torch.bmm(M_model, mv)
-        # Recompute mvp = proj @ mv_adj (batch)
-        proj_b = proj.unsqueeze(0).repeat(B,1,1)
-        mvp = torch.bmm(proj_b, mv_adj)
-        target = {
-            'mask': torch.stack([t['mask'] for t in target],0).to(device),
-            'depth': torch.stack([t['depth'] for t in target],0).to(device)
-        }
-        
-        # 디버깅: 텐서 shape 출력
-        if it == 0:
-            print(f"DEBUG - mv shape: {mv.shape}")
-            print(f"DEBUG - mvp shape: {mvp.shape}")
-            print(f"DEBUG - target['mask'] shape: {target['mask'].shape}")
-            print(f"DEBUG - target['depth'] shape: {target['depth'].shape}")
-            print(f"DEBUG - trans: {trans.detach().cpu().numpy()} scale: {scale.item() if FLAGS.opt_scale else 1.0} rot(euler): {rot_euler.detach().cpu().numpy() if FLAGS.opt_rotate else [0,0,0]} z_flip: {FLAGS.z_flip}")
-            if FLAGS.save_step:
-                save_target_images(target, it, FLAGS.out_dir)
+            minX = item['view_min_x']
+            minY = item['view_min_y']
+            minZ = item['view_min_z']
+            maxX = item['view_max_x']
+            maxY = item['view_max_y']
+            maxZ = item['view_max_z']
+            view_path = item['view_path']
+            mask_path = item['mask_path']
+            read_mv = item['mv']
+            mv = torch.tensor(read_mv, dtype=torch.float32, device=device)
+            mvp = proj @ mv
+
+            view_img = np.load(view_path)  # [H, W, 4]
+            mask_img = np.load(mask_path)  # [H, W, 1]
+            view = recorver_view_position(view_img, mask_img,
+                                          min_x=minX, min_y=minY, min_z=minZ,
+                                          max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
+
+            mv_batch.append(mv)
+            mvp_batch.append(mvp)
+            target.append({
+                'mask': torch.from_numpy(mask_img).float().to(device),  # [H, W, 1]
+                #render.py의 179~180행을 참고하여 리턴하는 img와 차원이 맞도록 수정
+                'depth': torch.from_numpy(view).float().to(device),  # [H, W, 4]
+            })
+
+        mv_stack = torch.stack(mv_batch).to(device)  # [B, 4, 4]
+        mvp_stack = torch.stack(mvp_batch).to(device)  # [B,
 
         # extract and render FlexiCubes mesh
         voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
@@ -286,40 +238,11 @@ if __name__ == "__main__":
         vertices, faces, L_dev = fc(grid_verts, sdf, cube_fx8, FLAGS.voxel_grid_res, beta_fx12=weight[:,:12], alpha_fx8=weight[:,12:20],
             gamma_f=weight[:,20], training=True)
         flexicubes_mesh = Mesh(vertices, faces)
-        buffers = render.render_mesh_paper(flexicubes_mesh, mv, mvp, FLAGS.train_res)
+        buffers = render.render_mesh_paper(flexicubes_mesh, mv_stack, mvp_stack, FLAGS.train_res)
         
-        # 디버깅: 버퍼 shape 출력
-        if it == 0:
-            print(f"DEBUG - buffers['mask'] shape: {buffers['mask'].shape}")
-            print(f"DEBUG - buffers['depth'] shape: {buffers['depth'].shape}")
-        
-        # 옵션: 손실 계산 해상도 다운샘플링 (그래디언트 강화/가속)
-        def maybe_downsample(t):
-            if FLAGS.downsample_factor <= 1:
-                return t
-            B, H, W, C = t.shape
-            t_nchw = t.permute(0,3,1,2)
-            t_ds = F.interpolate(t_nchw, size=(H//FLAGS.downsample_factor, W//FLAGS.downsample_factor), mode='bilinear', align_corners=False)
-            return t_ds.permute(0,2,3,1)
-
-        pred_mask = maybe_downsample(buffers['mask'])
-        gt_mask   = maybe_downsample(target['mask'])
-        pred_depth_z = maybe_downsample(buffers['depth'][..., 2:3])
-        gt_depth_z   = maybe_downsample(target['depth'])
-
         # evaluate reconstruction loss
-        mask_loss = (pred_mask - gt_mask).abs().mean() * FLAGS.mask_weight
-        depth_loss = (((((pred_depth_z - gt_depth_z) * gt_mask)**2).sum(-1)+1e-8)).sqrt().mean() * FLAGS.depth_weight
-
-        # 디버그: 겹침(Overlap) 지표
-        if it % max(1, FLAGS.save_interval) == 0:
-            with torch.no_grad():
-                pm = (pred_mask > 0.5).float()
-                gm = (gt_mask > 0.5).float()
-                inter = (pm*gm).mean().item()
-                u = ((pm+gm).clamp(0,1)).mean().item()
-                iou = inter / (u + 1e-8)
-                print(f"DEBUG IoU(mask) ~ inter:{inter:.4f}, union:{u:.4f}, IoU:{iou:.4f}, pred_mean:{pred_mask.mean().item():.4f}, gt_mean:{gt_mask.mean().item():.4f}")
+        mask_loss = (buffers['mask'] - target['mask']).abs().mean()
+        depth_loss = (((((buffers['depth'] - (target['depth']))* target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
     
         t_iter = it / FLAGS.iter
         sdf_weight = FLAGS.sdf_regularizer - (FLAGS.sdf_regularizer - FLAGS.sdf_regularizer/20)*min(1.0, 4.0 * t_iter)
@@ -336,13 +259,13 @@ if __name__ == "__main__":
         #     total_loss += torch.nn.functional.mse_loss(pred_sdf, gt_sdf) * 2e3
         
         # optionally add developability regularizer, as described in paper section 5.2
-        if FLAGS.develop_reg:
-            reg_weight = max(0, t_iter - 0.8) * 5
-            if reg_weight > 0: # only applied after shape converges
-                reg_loss = loss.mesh_developable_reg(flexicubes_mesh).mean() * 10
-                reg_loss += (deform).abs().mean()
-                reg_loss += (weight[:,:20]).abs().mean()
-                total_loss = mask_loss + depth_loss + reg_loss 
+        # if FLAGS.develop_reg:
+        #     reg_weight = max(0, t_iter - 0.8) * 5
+        #     if reg_weight > 0: # only applied after shape converges
+        #         reg_loss = loss.mesh_developable_reg(flexicubes_mesh).mean() * 10
+        #         reg_loss += (deform).abs().mean()
+        #         reg_loss += (weight[:,:20]).abs().mean()
+        #         total_loss = mask_loss + depth_loss + reg_loss 
         
         total_loss.backward()
         optimizer.step()
