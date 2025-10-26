@@ -127,13 +127,21 @@ if __name__ == "__main__":
         view_norm[:, 0] = normalize_channel(view[:, 0], view_min_x, view_max_x)
         view_norm[:, 1] = normalize_channel(view[:, 1], view_min_y, view_max_y)
         view_norm[:, 2] = normalize_channel(view[:, 2], view_min_z, view_max_z)
-        view_norm[:, 3] = 1.0  # 알파 채널은 1.0으로 설정 (완전 불투명)
+        
+        # 마스크 밖의 영역은 0으로 설정 (배경을 검은색으로)
+        view_norm[~valid_mask] = 0.0
+        
+        # 디버깅: 정규화 후 실제 값 범위 확인
+        print(f"  Normalized ranges:")
+        print(f"    X: [{view_norm[:, 0].min():.4f}, {view_norm[:, 0].max():.4f}]")
+        print(f"    Y: [{view_norm[:, 1].min():.4f}, {view_norm[:, 1].max():.4f}]")
+        print(f"    Z: [{view_norm[:, 2].min():.4f}, {view_norm[:, 2].max():.4f}]")
 
-        # 파일 저장
+        # 파일 저장 (RGB 채널만 사용)
         view_path = os.path.join(FLAGS.out_dir, f"view_{i:03d}.png")
         mask_path = os.path.join(FLAGS.out_dir, f"mask_{i:03d}.png")
 
-        imageio.imwrite(view_path, (view_norm * 255).astype(np.uint8))
+        imageio.imwrite(view_path, (view_norm[:, :, :3] * 255).astype(np.uint8))
         imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
         
         # 데이터셋 항목 추가
