@@ -217,15 +217,12 @@ if __name__ == "__main__":
             mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
             
             # Convert to torch tensors for recorver_view_position function
-            view_img_torch = torch.from_numpy(view_img).to(device)
-            mask_img_torch = torch.from_numpy(mask_img).to(device)
-
-            # Build min/max tensors once per sample (broadcastable to [H, W, 3])
-            min_xyz = torch.tensor([minX, minY, minZ], device=device, dtype=view_img_torch.dtype).view(1, 1, 3)
-            max_xyz = torch.tensor([maxX, maxY, maxZ], device=device, dtype=view_img_torch.dtype).view(1, 1, 3)
-
-            # Fast recover (vectorized, branchless)
-            view = recorver_view_position_fast(view_img_torch, mask_img_torch, min_xyz, max_xyz)  # [H, W, 4]
+            view_img_torch = torch.from_numpy(view_img).float().to(device)
+            mask_img_torch = torch.from_numpy(mask_img).float().to(device)
+            
+            view = recorver_view_position(view_img_torch, mask_img_torch,
+                                          min_x=minX, min_y=minY, min_z=minZ,
+                                          max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
 
             mv_batch.append(mv)
             mvp_batch.append(mvp)
