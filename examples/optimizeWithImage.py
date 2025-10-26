@@ -108,6 +108,7 @@ if __name__ == "__main__":
     parser.add_argument('-fc', '--focus_count', type=int, default= 0 )
     parser.add_argument('-ri', '--rendering_info', type=str, default=None)
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
+    parser.add_argument('-op', '--output_prefix', type=str, default=None)
 
 
     FLAGS = parser.parse_args()
@@ -255,5 +256,5 @@ if __name__ == "__main__":
     #  Save ouput
     # ==============================================================================================     
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
-    mesh_np.export(os.path.join(FLAGS.out_dir, f'gird_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | lr {FLAGS.learning_rate} | fc {FLAGS.focus_count} | train_res {FLAGS.train_res}.obj'))
+    mesh_np.export(os.path.join(FLAGS.out_dir, f'{FLAGS.output_prefix} | gird_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | lr {FLAGS.learning_rate} | fc {FLAGS.focus_count} | train_res {FLAGS.train_res}.obj'))
 
