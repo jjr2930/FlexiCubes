@@ -45,7 +45,7 @@ def time_to_string(seconds, prefix=''):
     h = (seconds % 86400) // 3600
     m = (seconds % 3600) // 60
     s = seconds % 60
-    return f"{prefix}:{h:02d}:{m:02d}:{s:02d}"
+    return f"{prefix} | {h:02d}:{m:02d}:{s:02d}"
 
 def save_target_images(target, iteration, output_dir):
     """Save target mask and depth images to files"""
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     #  Train loop
     # ==============================================================================================   
     for it in range(FLAGS.iter): 
-        print(time_to_string(time.time(), prefix=f"Iteration {it}"))
+        print(time_to_string(time.time(), prefix=f"Iteration {it} : "))
         optimizer.zero_grad()
 
         proj = perspective(fovy=np.deg2rad(fov), aspect=res_width/res_height, n=near_clip, f=far_clip, device=device)
