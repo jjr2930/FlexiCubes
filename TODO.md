@@ -1,0 +1,4 @@
+- [x] Inspect JSON structure from examples/camera_matrices.json.
+- [x] Design data representation and parsing outputs.
+- [x] Implement parsing code in examples/imageDataParser.py.
+- [x] Document usage or provide example invocation.

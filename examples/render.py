@@ -190,6 +190,62 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
         out_dict[type] = img
     return out_dict
 
+
+def render_from_images(rgb_image, mask_image, depth_image, return_types = ["mask", "depth"], white_bg=False):
+    '''
+    RGB/Mask/Depth 이미지를 입력받아 render_mesh_paper와 동일한 형식의 출력을 반환하는 함수.
+    
+    Args:
+        rgb_image: RGB 이미지 텐서 [H, W, 3] 또는 [1, H, W, 3]
+        mask_image: 마스크 이미지 텐서 [H, W, 1] 또는 [1, H, W, 1], 값은 [0, 1] 범위
+        depth_image: Depth 이미지 텐서 [H, W, 4] 또는 [1, H, W, 4] (homogeneous coordinates)
+        return_types: 반환할 타입 리스트 (예: ["mask", "depth", "rgb"])
+        white_bg: True일 경우 배경을 흰색으로 처리
+        
+    Returns:
+        out_dict: 요청한 타입별 이미지 딕셔너리
+    '''
+    # 입력 텐서가 배치 차원이 없으면 추가
+    if rgb_image.dim() == 3:
+        rgb_image = rgb_image.unsqueeze(0)
+    if mask_image.dim() == 3:
+        mask_image = mask_image.unsqueeze(0)
+    if depth_image.dim() == 3:
+        depth_image = depth_image.unsqueeze(0)
+    
+    out_dict = {}
+    
+    for type in return_types:
+        if type == "mask":
+            # render_mesh_paper와 동일하게 antialiasing된 마스크 형태로 반환
+            # 이미 안티앨리어싱이 적용된 mask를 그대로 사용
+            img = mask_image
+            
+        elif type == "depth":
+            # depth_image는 이미 카메라 좌표계의 homogeneous 형태 [B, H, W, 4]
+            img = depth_image
+            
+        elif type == "rgb":
+            # RGB 이미지를 그대로 반환
+            img = rgb_image
+            
+        else:
+            # 지원하지 않는 타입은 건너뛰기
+            continue
+            
+        # white_bg 옵션 적용
+        if white_bg and type != "mask":
+            bg = torch.ones_like(img)
+            # mask_image를 alpha로 사용 (마스크가 있는 부분만 표시)
+            alpha = mask_image
+            img = torch.lerp(bg, img, alpha)
+            
+        out_dict[type] = img
+        
+    return out_dict
+
+
+
 class SplitVisualizer():
     def __init__(self, lh_mesh, rh_mesh, height, width):
         self.lh_mesh = lh_mesh
