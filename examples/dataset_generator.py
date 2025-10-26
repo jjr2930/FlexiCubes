@@ -99,13 +99,36 @@ if __name__ == "__main__":
         valid_view = view[valid_mask]  # [N, 4]
         
         if len(valid_view) > 0:
+            # 0이 아닌 값들만 필터링 (각 채널별로 독립적으로)
+            # Y와 Z가 음수 범위이므로, 절댓값이 작은 값들(0에 가까운 값)을 제외
+            threshold = 1e-3
+            
+            # 각 채널에서 유효한 값들만 선택
+            valid_x = valid_view[:, 0]
+            valid_y = valid_view[:, 1]
+            valid_z = valid_view[:, 2]
+            
+            # Y와 Z는 음수이므로 threshold보다 작은 값들만 (즉, 절댓값이 큰 값들)
+            mask_y = valid_y < -threshold
+            mask_z = valid_z < -threshold
+            
             # X, Y, Z 좌표에서 min, max 구하기
-            view_min_x = valid_view[:, 0].min()
-            view_max_x = valid_view[:, 0].max()
-            view_min_y = valid_view[:, 1].min()
-            view_max_y = valid_view[:, 1].max()
-            view_min_z = valid_view[:, 2].min()
-            view_max_z = valid_view[:, 2].max()
+            view_min_x = valid_x.min()
+            view_max_x = valid_x.max()
+            
+            if mask_y.any():
+                view_min_y = valid_y[mask_y].min()
+                view_max_y = valid_y[mask_y].max()
+            else:
+                view_min_y = valid_y.min()
+                view_max_y = valid_y.max()
+            
+            if mask_z.any():
+                view_min_z = valid_z[mask_z].min()
+                view_max_z = valid_z[mask_z].max()
+            else:
+                view_min_z = valid_z.min()
+                view_max_z = valid_z.max()
         else:
             # 유효한 픽셀이 없는 경우 전체 범위 사용
             view_min_x = view[:, :, 0].min()
