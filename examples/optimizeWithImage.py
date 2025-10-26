@@ -198,8 +198,8 @@ if __name__ == "__main__":
 
             view_full_path = os.path.join(FLAGS.working_directory, view_path)
             mask_full_path = os.path.join(FLAGS.working_directory, mask_path)
-            view_img = np.load(view_full_path)  # [H, W, 4]
-            mask_img = np.load(mask_full_path)  # [H, W, 1]
+            view_img = np.load(view_full_path, allow_pickle=True)  # [H, W, 4]
+            mask_img = np.load(mask_full_path, allow_pickle=True)  # [H, W, 1]
             view = recorver_view_position(view_img, mask_img,
                                           min_x=minX, min_y=minY, min_z=minZ,
                                           max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
