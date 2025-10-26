@@ -128,14 +128,16 @@ if __name__ == "__main__":
         view_norm[:, 1] = normalize_channel(view[:, 1], view_min_y, view_max_y)
         view_norm[:, 2] = normalize_channel(view[:, 2], view_min_z, view_max_z)
         
-        # 마스크 밖의 영역은 0으로 설정 (배경을 검은색으로)
-        view_norm[~valid_mask] = 0.0
+        # 디버깅: 정규화 후 실제 값 범위 확인 (마스크 적용 전)
+        print(f"  Normalized ranges (before masking):")
+        valid_view_norm = view_norm[valid_mask]
+        print(f"    X: [{valid_view_norm[:, 0].min():.4f}, {valid_view_norm[:, 0].max():.4f}]")
+        print(f"    Y: [{valid_view_norm[:, 1].min():.4f}, {valid_view_norm[:, 1].max():.4f}]")
+        print(f"    Z: [{valid_view_norm[:, 2].min():.4f}, {valid_view_norm[:, 2].max():.4f}]")
         
-        # 디버깅: 정규화 후 실제 값 범위 확인
-        print(f"  Normalized ranges:")
-        print(f"    X: [{view_norm[:, 0].min():.4f}, {view_norm[:, 0].max():.4f}]")
-        print(f"    Y: [{view_norm[:, 1].min():.4f}, {view_norm[:, 1].max():.4f}]")
-        print(f"    Z: [{view_norm[:, 2].min():.4f}, {view_norm[:, 2].max():.4f}]")
+        # 마스크 밖의 영역은 0으로 설정 (배경을 검은색으로)
+        for c in range(3):  # RGB 채널에만 적용
+            view_norm[:, :, c][~valid_mask] = 0.0
 
         # 파일 저장 (RGB 채널만 사용)
         view_path = os.path.join(FLAGS.out_dir, f"view_{i:03d}.png")
