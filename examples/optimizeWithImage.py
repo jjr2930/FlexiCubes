@@ -98,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
     parser.add_argument('--voxel_grid_res',nargs=3, type=int, default=[64,64,64])
     
-    parser.add_argument('--sdf_loss', type=bool, default=True)
+    parser.add_argument('--sdf_loss', type=bool, default=False)  # 이미지 기반 복원에서는 GT 메시가 없으므로 False
     parser.add_argument('--develop_reg', type=bool, default=False)
     parser.add_argument('--sdf_regularizer', type=float, default=0.2)
     
@@ -116,8 +116,8 @@ if __name__ == "__main__":
     glctx = dr.RasterizeGLContext()
     
     # Load GT mesh
-    gt_mesh = load_mesh(FLAGS.ref_mesh, device)
-    gt_mesh.auto_normals() # compute face normals for visualization
+    # gt_mesh = load_mesh(FLAGS.ref_mesh, device)
+    # gt_mesh.auto_normals() # compute face normals for visualization
     
     # ==============================================================================================
     #  Create and initialize FlexiCubes
@@ -151,11 +151,6 @@ if __name__ == "__main__":
     start_time = time.time()
     print_now_time()
     
-    #삼각형의 총갯수와 버텍스의 총갯수 출력
-    num_faces = gt_mesh.faces.shape[0]
-    num_vertices = gt_mesh.vertices.shape[0]
-    # print(f"num_faces : {num_faces}, num_vertices : {num_vertices}")
-
     renderedImage = rendering_data_parser.load_camera_dataset(FLAGS.rendering_info)
     
     # ==============================================================================================
@@ -199,12 +194,12 @@ if __name__ == "__main__":
         reg_loss += (weight[:,:20]).abs().mean() * 0.1
         total_loss = mask_loss + depth_loss + reg_loss
         
-        if FLAGS.sdf_loss: # optionally add SDF loss to eliminate internal structures
-            with torch.no_grad():
-                pts = sample_random_points(1000, gt_mesh)
-                gt_sdf = compute_sdf(pts, gt_mesh.vertices, gt_mesh.faces)
-            pred_sdf = compute_sdf(pts, flexicubes_mesh.vertices, flexicubes_mesh.faces)
-            total_loss += torch.nn.functional.mse_loss(pred_sdf, gt_sdf) * 2e3
+        # if FLAGS.sdf_loss: # optionally add SDF loss to eliminate internal structures
+        #     with torch.no_grad():
+        #         pts = sample_random_points(1000, gt_mesh)
+        #         gt_sdf = compute_sdf(pts, gt_mesh.vertices, gt_mesh.faces)
+        #     pred_sdf = compute_sdf(pts, flexicubes_mesh.vertices, flexicubes_mesh.faces)
+        #     total_loss += torch.nn.functional.mse_loss(pred_sdf, gt_sdf) * 2e3
         
         # optionally add developability regularizer, as described in paper section 5.2
         if FLAGS.develop_reg:
@@ -231,9 +226,10 @@ if __name__ == "__main__":
                 val_buffers = render.render_mesh_paper(flexicubes_mesh, mv.unsqueeze(0), mvp.unsqueeze(0), FLAGS.display_res, return_types=["normal"], white_bg=True)
                 val_image = ((val_buffers["normal"][0].detach().cpu().numpy()+1)/2*255).astype(np.uint8)
                 
-                gt_buffers = render.render_mesh_paper(gt_mesh, mv.unsqueeze(0), mvp.unsqueeze(0), FLAGS.display_res, return_types=["normal"], white_bg=True)
-                gt_image = ((gt_buffers["normal"][0].detach().cpu().numpy()+1)/2*255).astype(np.uint8)
-                imageio.imwrite(os.path.join(FLAGS.out_dir, '{:04d}.png'.format(it)), np.concatenate([val_image, gt_image], 1))
+                # gt_buffers = render.render_mesh_paper(gt_mesh, mv.unsqueeze(0), mvp.unsqueeze(0), FLAGS.display_res, return_types=["normal"], white_bg=True)
+                # gt_image = ((gt_buffers["normal"][0].detach().cpu().numpy()+1)/2*255).astype(np.uint8)
+                # imageio.imwrite(os.path.join(FLAGS.out_dir, '{:04d}.png'.format(it)), np.concatenate([val_image, gt_image], 1))
+                imageio.imwrite(os.path.join(FLAGS.out_dir, '{:04d}.png'.format(it)), val_image, 1)
                 print(f"Optimization Step [{it}/{FLAGS.iter}], Loss: {total_loss.item():.4f}")
             
     # ==============================================================================================
