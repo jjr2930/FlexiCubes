@@ -105,6 +105,8 @@ if __name__ == "__main__":
     parser.add_argument('--compose_mode', type=str, default='post', choices=['post','pre'], help='Compose model transform with MV: post => MV@M, pre => M@MV')
     parser.add_argument('--opt_translate', type=bool, default=True, help='Optimize global translation of the model')
     parser.add_argument('--opt_scale', type=bool, default=False, help='Optimize global uniform scale of the model')
+    parser.add_argument('--opt_rotate', type=bool, default=True, help='Optimize global Euler rotation (rx, ry, rz) of the model')
+    parser.add_argument('--z_flip', type=bool, default=False, help='Apply Z-axis flip in model matrix (handedness fix)')
     parser.add_argument('--voxel_grid_res',nargs=3, type=int, default=[64,64,64])
     
     parser.add_argument('--sdf_loss', type=bool, default=False)  # 이미지 기반 복원에서는 GT 메시가 없으므로 False
@@ -161,12 +163,15 @@ if __name__ == "__main__":
     # Learnable global transform parameters
     trans = torch.nn.Parameter(torch.zeros(3, device=device), requires_grad=FLAGS.opt_translate)
     scale = torch.nn.Parameter(torch.tensor(1.0, device=device), requires_grad=FLAGS.opt_scale)
+    rot_euler = torch.nn.Parameter(torch.zeros(3, device=device), requires_grad=FLAGS.opt_rotate)  # [rx, ry, rz] in radians
 
     params = [sdf, weight, deform]
     if FLAGS.opt_translate:
         params.append(trans)
     if FLAGS.opt_scale:
         params.append(scale)
+    if FLAGS.opt_rotate:
+        params.append(rot_euler)
 
     optimizer = torch.optim.Adam(params, lr=FLAGS.learning_rate)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: lr_schedule(x)) 
@@ -193,17 +198,35 @@ if __name__ == "__main__":
         else:
             return mv_batch
 
+    def _euler_to_matrix(rx, ry, rz):
+        cx, sx = torch.cos(rx), torch.sin(rx)
+        cy, sy = torch.cos(ry), torch.sin(ry)
+        cz, sz = torch.cos(rz), torch.sin(rz)
+        # Rotation order: Rz @ Ry @ Rx
+        Rx = torch.tensor([[1, 0, 0], [0, cx, -sx], [0, sx, cx]], dtype=torch.float32, device=device)
+        Ry = torch.tensor([[cy, 0, sy], [0, 1, 0], [-sy, 0, cy]], dtype=torch.float32, device=device)
+        Rz = torch.tensor([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]], dtype=torch.float32, device=device)
+        R = Rz @ Ry @ Rx
+        return R
+
     def make_model_matrix(B: int, device: str) -> torch.Tensor:
-        # Build 4x4 model matrix from trans/scale
+        # Build 4x4 model matrix from trans/scale/rotation
         s = scale if FLAGS.opt_scale else torch.tensor(1.0, device=device)
         t = trans if FLAGS.opt_translate else torch.zeros(3, device=device)
+        if FLAGS.opt_rotate:
+            R = _euler_to_matrix(rot_euler[0], rot_euler[1], rot_euler[2])  # [3,3]
+        else:
+            R = torch.eye(3, device=device)
+
+        RS = R * s  # uniform scale
         M = torch.eye(4, device=device).unsqueeze(0).repeat(B,1,1)
-        M[:,0,0] = s
-        M[:,1,1] = s
-        M[:,2,2] = s
-        M[:,0,3] = t[0]
-        M[:,1,3] = t[1]
-        M[:,2,3] = t[2]
+        M[:,0:3,0:3] = RS
+        M[:,0:3,3] = t
+        if FLAGS.z_flip:
+            # Post-multiply by Z-flip on model (reflect Z axis)
+            F = torch.eye(4, device=device)
+            F[2,2] = -1.0
+            M = torch.bmm(M, F.unsqueeze(0).repeat(B,1,1))
         return M
     
     # ==============================================================================================
@@ -246,7 +269,7 @@ if __name__ == "__main__":
             print(f"DEBUG - mvp shape: {mvp.shape}")
             print(f"DEBUG - target['mask'] shape: {target['mask'].shape}")
             print(f"DEBUG - target['depth'] shape: {target['depth'].shape}")
-            print(f"DEBUG - trans: {trans.detach().cpu().numpy()} scale: {scale.item() if FLAGS.opt_scale else 1.0}")
+            print(f"DEBUG - trans: {trans.detach().cpu().numpy()} scale: {scale.item() if FLAGS.opt_scale else 1.0} rot(euler): {rot_euler.detach().cpu().numpy() if FLAGS.opt_rotate else [0,0,0]} z_flip: {FLAGS.z_flip}")
             if FLAGS.save_step:
                 save_target_images(target, it, FLAGS.out_dir)
 

@@ -16,6 +16,7 @@ import numpy as np
 import os
 import copy
 import math
+import imageio
 from ipywidgets import interactive, HBox, VBox, FloatLogSlider, IntSlider
 
 import torch
@@ -177,6 +178,14 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
         elif type == "depth":
             v_pos_cam = util.xfm_points(mesh.vertices.unsqueeze(0), mv)
             img, _ = util.interpolate(v_pos_cam, rast, mesh.faces.int())
+            # 배치 내 각 이미지를 개별적으로 저장
+            for batch_idx in range(img.shape[0]):
+                depth_img = img[batch_idx].cpu().numpy()
+                # depth 값을 0-255 범위로 정규화 (시각화를 위해)
+                depth_normalized = (depth_img[..., 2:3] - depth_img[..., 2:3].min()) / (depth_img[..., 2:3].max() - depth_img[..., 2:3].min() + 1e-8)
+                depth_normalized = (depth_normalized * 255).astype(np.uint8)
+                imageio.imwrite(f"depth_image_{batch_idx}.png", depth_normalized)
+
         elif type == "normal" :
             normal_indices = (torch.arange(0, mesh.nrm.shape[0], dtype=torch.int64, device='cuda')[:, None]).repeat(1, 3)
             img, _ = util.interpolate(mesh.nrm.unsqueeze(0).contiguous(), rast, normal_indices.int())
