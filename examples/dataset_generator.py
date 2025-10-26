@@ -100,13 +100,37 @@ if __name__ == "__main__":
         
         if len(valid_view) > 0:
             print('valid_view shape:', valid_view.shape)
-            # X, Y, Z 좌표에서 min, max 구하기
-            view_min_x = valid_view[:, 0].min()
-            view_max_x = valid_view[:, 0].max()
-            view_min_y = valid_view[:, 1].min()
-            view_max_y = valid_view[:, 1].max()
-            view_min_z = valid_view[:, 2].min()
-            view_max_z = valid_view[:, 2].max()
+            
+            # 각 채널에서 0이 아닌 값들만 사용하여 min, max 계산
+            # (배경의 0 값을 제외하기 위함)
+            valid_x = valid_view[:, 0]
+            valid_y = valid_view[:, 1]
+            valid_z = valid_view[:, 2]
+            
+            # 실제 객체 영역만 고려 (절댓값이 매우 작은 값 제외)
+            eps = 1e-6
+            mask_x = np.abs(valid_x) > eps
+            mask_y = np.abs(valid_y) > eps
+            mask_z = np.abs(valid_z) > eps
+            
+            # 최소 하나의 유효한 값이 있는 경우에만 계산
+            if mask_x.any():
+                view_min_x = valid_x[mask_x].min()
+                view_max_x = valid_x[mask_x].max()
+            else:
+                view_min_x, view_max_x = valid_x.min(), valid_x.max()
+                
+            if mask_y.any():
+                view_min_y = valid_y[mask_y].min()
+                view_max_y = valid_y[mask_y].max()
+            else:
+                view_min_y, view_max_y = valid_y.min(), valid_y.max()
+                
+            if mask_z.any():
+                view_min_z = valid_z[mask_z].min()
+                view_max_z = valid_z[mask_z].max()
+            else:
+                view_min_z, view_max_z = valid_z.min(), valid_z.max()
             
             # 디버깅: min/max 값 출력
             print(f"  X range: [{view_min_x:.4f}, {view_max_x:.4f}]")
