@@ -51,35 +51,7 @@ if __name__ == "__main__":
     cam_near = FLAGS.cam_near
     cam_far = FLAGS.cam_far
 
-    mvstack, mvpstack = [], []
-    azimuth_delta = 360.0 / FLAGS.azimuth_step
-    azimuth_steps = int(360.0 / azimuth_delta)
-    for i in range(azimuth_steps):
-        azimuth = i * azimuth_delta
-        mv, mvp = render.orbit(0, azimuth=np.deg2rad(azimuth), radius=radius, 
-                            lookPosition=lookPosition, 
-                            fovy=np.deg2rad(fovy), 
-                            iter_res=render_resolution, 
-                            cam_near_far=[cam_near, cam_far],
-                            device=device)
-    
-        mvstack.append(mv)
-        mvpstack.append(mvp)
-
-    mv = torch.stack(mvstack).to(device)
-    mvp = torch.stack(mvpstack).to(device)
-    
-    rendered = render.render_mesh_paper(gt_mesh, mv, mvp, render_resolution)
-    
-    depth = rendered['depth'].cpu().numpy()
-    mask = rendered['mask'].cpu().numpy()
-
-    #depth, 모두 0~1사이로 정규화
-    depth_min = depth[mask>0].min()
-    depth_max = depth[mask>0].max()
-    depth_norm = (depth - depth_min) / (depth_max - depth_min + 1e-8)
-    
-    batch = mv.shape[0]
+    # 데이터셋 정보 초기화
     dataset = dict()
     dataset["fovy"] = fovy
     dataset["near"] = cam_near
@@ -88,14 +60,67 @@ if __name__ == "__main__":
     dataset["res_height"] = render_resolution[1]
     dataset["data"] = []
 
-    for i in range(batch):
+    azimuth_delta = 360.0 / FLAGS.azimuth_step
+    azimuth_steps = int(360.0 / azimuth_delta)
+    
+    print(f"Generating {azimuth_steps} views...")
+    
+    for i in range(azimuth_steps):
+        azimuth = i * azimuth_delta
+        print(f"Rendering view {i+1}/{azimuth_steps} (azimuth: {azimuth:.1f}°)...")
+        
+        # 한 장씩 렌더링하여 메모리 절약
+        mv, mvp = render.orbit(0, azimuth=np.deg2rad(azimuth), radius=radius, 
+                            lookPosition=lookPosition, 
+                            fovy=np.deg2rad(fovy), 
+                            iter_res=render_resolution, 
+                            cam_near_far=[cam_near, cam_far],
+                            device=device)
+        
+        # 배치 차원 추가 (render_mesh_paper는 배치를 기대함)
+        mv_batch = mv.unsqueeze(0)
+        mvp_batch = mvp.unsqueeze(0)
+        
+        # 렌더링
+        rendered = render.render_mesh_paper(gt_mesh, mv_batch, mvp_batch, render_resolution)
+        
+        depth = rendered['depth'][0].cpu().numpy()  # [H, W, 4]
+        mask = rendered['mask'][0].cpu().numpy()    # [H, W, 1]
+        
+        # 메모리 정리
+        del rendered
+        torch.cuda.empty_cache()
+        
+        # 각 이미지의 마스크 영역에서 depth 값의 min/max 계산
+        current_mask = mask[..., 0] > 0  # [H, W]
+        
+        # 마스크 영역의 depth 좌표들
+        masked_depth = depth[current_mask]  # [N, 4]
+        
+        if len(masked_depth) > 0:
+            # 각 채널(x, y, z)의 min/max 계산
+            depth_min = masked_depth[:, :3].min(axis=0)  # [3] (x, y, z)
+            depth_max = masked_depth[:, :3].max(axis=0)  # [3] (x, y, z)
+            
+            # depth를 0~1로 정규화 (Z 채널만 사용)
+            depth_z = depth[..., 2]  # [H, W]
+            depth_z_min = masked_depth[:, 2].min()
+            depth_z_max = masked_depth[:, 2].max()
+            depth_norm = (depth_z - depth_z_min) / (depth_z_max - depth_z_min + 1e-8)
+        else:
+            # 마스크가 비어있는 경우 기본값
+            depth_min = np.array([-1.0, -1.0, -1.0])
+            depth_max = np.array([-1.0, -1.0, -1.0])
+            depth_norm = depth[..., 2]
+        
+        # 파일 저장
         depth_path = os.path.join(FLAGS.out_dir, f"depth_{i:03d}.png")
         mask_path = os.path.join(FLAGS.out_dir, f"mask_{i:03d}.png")
 
-        imageio.imwrite(depth_path, (depth_norm[i]*255).astype(np.uint8))
-        imageio.imwrite(mask_path, (mask[i]*255).astype(np.uint8))
-        print("Depth and mask images saved.")
-
+        imageio.imwrite(depth_path, (depth_norm * 255).astype(np.uint8))
+        imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
+        
+        # 데이터셋 항목 추가
         dataset_item = dict()
         dataset_item["depth_path"] = os.path.basename(depth_path)
         dataset_item["mask_path"] = os.path.basename(mask_path)
