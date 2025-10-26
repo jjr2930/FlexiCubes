@@ -198,8 +198,16 @@ if __name__ == "__main__":
 
             view_full_path = os.path.join(FLAGS.working_directory, view_path)
             mask_full_path = os.path.join(FLAGS.working_directory, mask_path)
-            view_img = np.load(view_full_path, allow_pickle=True)  # [H, W, 4]
-            mask_img = np.load(mask_full_path, allow_pickle=True)  # [H, W, 1]
+            
+            # Load image files
+            view_img = imageio.imread(view_full_path)  # [H, W, 3 or 4]
+            view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
+            
+            mask_img = imageio.imread(mask_full_path)  # [H, W] or [H, W, 1]
+            if len(mask_img.shape) == 2:
+                mask_img = mask_img[:, :, np.newaxis]  # Add channel dimension [H, W, 1]
+            mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
+            
             view = recorver_view_position(view_img, mask_img,
                                           min_x=minX, min_y=minY, min_z=minZ,
                                           max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
