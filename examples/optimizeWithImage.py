@@ -108,7 +108,6 @@ if __name__ == "__main__":
     parser.add_argument('-si', '--save_interval', type=int, default=20)
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
     parser.add_argument('-fc', '--focus_count', type=int, default= 0 )
-    parser.add_argument('-ri', '--rendering_info', type=str, default=None)
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
     parser.add_argument('-op', '--output_prefix', type=str, default=None)
     parser.add_argument('-df', '--dataset_file', type=str, default=None)
@@ -143,13 +142,7 @@ if __name__ == "__main__":
     x_nx3, cube_fx8 = fc.construct_voxel_grid(FLAGS.voxel_grid_res)
     x_nx3 *= 2 # scale up the grid so that it's larger than the target object
     
-    # Initialize SDF as a sphere for more stable convergence
-    # SDF = distance_from_center - radius (negative inside, positive outside)
-    center = torch.zeros(3, device=device)
-    radius = 0.5
-    distances = torch.norm(x_nx3 - center, dim=1)
-    sdf = distances - radius  # Sphere SDF
-    
+    sdf = torch.rand_like(x_nx3[:,0]) - 0.1 # randomly init SDF
     sdf    = torch.nn.Parameter(sdf.clone().detach(), requires_grad=True)
     # set per-cube learnable weights to zeros
     weight = torch.zeros((cube_fx8.shape[0], 21), dtype=torch.float, device='cuda') 
@@ -165,21 +158,9 @@ if __name__ == "__main__":
     #  Setup optimizer
     # ==============================================================================================
     # Learnable global transform parameters
-    trans = torch.nn.Parameter(torch.zeros(3, device=device), requires_grad=FLAGS.opt_translate)
-    scale = torch.nn.Parameter(torch.tensor(1.0, device=device), requires_grad=FLAGS.opt_scale)
-    rot_euler = torch.nn.Parameter(torch.zeros(3, device=device), requires_grad=FLAGS.opt_rotate)  # [rx, ry, rz] in radians
-
-    params = [sdf, weight, deform]
-    if FLAGS.opt_translate:
-        params.append(trans)
-    if FLAGS.opt_scale:
-        params.append(scale)
-    if FLAGS.opt_rotate:
-        params.append(rot_euler)
-
-    optimizer = torch.optim.Adam(params, lr=FLAGS.learning_rate)
+    optimizer = torch.optim.Adam([sdf, weight,deform], lr=FLAGS.learning_rate)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: lr_schedule(x)) 
-    
+
     # ==============================================================================================
     #  print now time
     # ==============================================================================================   

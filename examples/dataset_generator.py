@@ -116,9 +116,9 @@ if __name__ == "__main__":
             view_max_z = view[:, :, 2].max()
         
         # 디버깅: min/max 값 출력
-        print(f"  X range: [{view_min_x:.4f}, {view_max_x:.4f}]")
-        print(f"  Y range: [{view_min_y:.4f}, {view_max_y:.4f}]")
-        print(f"  Z range: [{view_min_z:.4f}, {view_max_z:.4f}]")
+        # print(f"  X range: [{view_min_x:.4f}, {view_max_x:.4f}]")
+        # print(f"  Y range: [{view_min_y:.4f}, {view_max_y:.4f}]")
+        # print(f"  Z range: [{view_min_z:.4f}, {view_max_z:.4f}]")
 
         # 정규화 함수
         def normalize_channel(channel, min_val, max_val):
@@ -135,11 +135,11 @@ if __name__ == "__main__":
         # 마스크가 없는 영역은 이미 0으로 초기화되어 있음
         
         # 디버깅: 정규화 후 실제 값 범위 확인
-        print(f"  Normalized ranges:")
+        # print(f"  Normalized ranges:")
         valid_view_norm = view_norm[valid_mask]
-        print(f"    X: [{valid_view_norm[:, 0].min():.4f}, {valid_view_norm[:, 0].max():.4f}]")
-        print(f"    Y: [{valid_view_norm[:, 1].min():.4f}, {valid_view_norm[:, 1].max():.4f}]")
-        print(f"    Z: [{valid_view_norm[:, 2].min():.4f}, {valid_view_norm[:, 2].max():.4f}]")
+        # print(f"    X: [{valid_view_norm[:, 0].min():.4f}, {valid_view_norm[:, 0].max():.4f}]")
+        # print(f"    Y: [{valid_view_norm[:, 1].min():.4f}, {valid_view_norm[:, 1].max():.4f}]")
+        # print(f"    Z: [{valid_view_norm[:, 2].min():.4f}, {valid_view_norm[:, 2].max():.4f}]")
 
         # 파일 저장 (RGB 채널만 사용)
         view_path = os.path.join(FLAGS.out_dir, f"view_{i:03d}.png")
