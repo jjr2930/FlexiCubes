@@ -128,7 +128,12 @@ def load_camera_dataset(json_path: Path | str) -> RenderingDataSet:
 		)
 		items.append(camera_item)
 
-	return RenderingDataSet(fov=fov, near_clip=near_clip, far_clip=far_clip, items=items)
+	return RenderingDataSet(fov=fov, 
+						near_clip=near_clip, 
+						far_clip=far_clip, 
+						items=items,
+						resolution_width=resolution_width, 
+						resolution_height=resolution_height)
 
 
 def iter_camera_dataset(json_path: Path | str) -> Iterable[CameraItem]:
