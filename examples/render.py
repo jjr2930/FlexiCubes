@@ -183,7 +183,14 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
                 depth_img = img[batch_idx].detach().cpu().numpy()
                 #depth_img 의 차원을 출력해봐
                 print(depth_img.shape)
-                
+                # depth_img rgba(xyzw)의 에서 xyzw
+                x = depth_img[..., 0]
+                y = depth_img[..., 1]
+                z = depth_img[..., 2]
+                w = depth_img[..., 3]
+                print(f"Depth image XYZW values: {x}, {y}, {z}, {w}")
+
+
                 # depth 값을 0-255 범위로 정규화 (시각화를 위해)
                 depth_normalized = (depth_img[..., 2] - depth_img[..., 2].min()) / (depth_img[..., 2].max() - depth_img[..., 2].min() + 1e-8)
                 depth_normalized = (depth_normalized * 255).astype(np.uint8)
