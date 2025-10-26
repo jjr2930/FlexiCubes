@@ -278,6 +278,50 @@ def render_from_images(rgb_image, mask_image, depth_image, return_types = ["mask
         
     return out_dict
 
+def orbit(elevation: float, azimuth: float, radius: float, lookPosition=[0.0, 0.0, 0.0], 
+          fovy=np.deg2rad(45), iter_res=[512, 512], cam_near_far=[0.1, 1000.0], device="cuda"):
+    """
+    카메라 궤도 렌더링을 위한 view/projection 매트릭스 생성
+    
+    Args:
+        elevation: 수직 각도 (라디안)
+        azimuth: 수평 각도 (라디안)
+        radius: 카메라와 타겟 사이의 거리
+        offset: 타겟 위치의 3D 오프셋 (x, y, z)
+        fovy: Field of view Y (라디안)
+        iter_res: 렌더링 해상도 [높이, 너비]
+        cam_near_far: Near/Far clipping plane [near, far]
+        device: 디바이스 ('cuda' 또는 'cpu')
+    
+    Returns:
+        mv: Model-View 매트릭스
+        mvp: Model-View-Projection 매트릭스
+    """
+    # Projection 매트릭스 생성
+    proj_mtx = util.perspective(fovy, iter_res[1] / iter_res[0], cam_near_far[0], cam_near_far[1], device=device)
+    
+    # 구면 좌표를 카르테시안 좌표로 변환하여 카메라 위치 계산
+    camera_x = radius * np.cos(elevation) * np.cos(azimuth)
+    camera_y = radius * np.sin(elevation)
+    camera_z = radius * np.cos(elevation) * np.sin(azimuth)
+    
+    # offset을 적용한 카메라 위치
+    camera_pos = torch.tensor([camera_x , camera_y , camera_z ], 
+                              dtype=torch.float32, device=device)
+    
+    # 타겟 위치
+    target_pos = torch.tensor(lookPosition, dtype=torch.float32, device=device)
+    
+    # 업 벡터
+    upvector = torch.tensor([0.0, 1.0, 0.0], dtype=torch.float32, device=device)
+    
+    # View 매트릭스 생성
+    mv = util.viewMatrix(camera_pos, target_pos, upvector, device=device)
+    
+    # Model-View-Projection 매트릭스
+    mvp = proj_mtx @ mv
+    
+    return mv, mvp
 
 
 class SplitVisualizer():

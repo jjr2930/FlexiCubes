@@ -1,0 +1,19 @@
+{
+    "fovy": 45,
+    "res_width": 2048,
+    "res_height": 2048,
+    "near": 0.01,
+    "far": 10.0,
+    "data":[
+        {
+            "depth_min_x" : -1.0,
+            "depth_min_y" : -1.0,
+            "depth_min_z" : -1.0,
+            "depth_max_x" : -1.0,
+            "depth_max_y" : -1.0,
+            "depth_max_z" : -1.0,
+            "depth_path" : "testDepth.png",
+            "mask_path" :  "testMask.png"
+        }
+    ]
+}
