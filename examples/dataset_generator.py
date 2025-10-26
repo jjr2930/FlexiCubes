@@ -92,46 +92,21 @@ if __name__ == "__main__":
         torch.cuda.empty_cache()
 
         #view -> 뷰 공간 좌표계로 변환된 좌표들이야 나는 이걸 0~1 사이로 정규화된 값으로 바꾸고싶다구
-        # 마스크 영역만 사용하여 min, max 계산 (배경 제외)
+        # 마스크 값이 0.1 이상인 영역만 사용하여 min, max 계산
         valid_mask = mask[..., 0] >= 0.1  # [H, W]
         
         # 유효한 영역의 view 좌표만 추출
         valid_view = view[valid_mask]  # [N, 4]
         
         if len(valid_view) > 0:
-            print("valid")
-            # 0이 아닌 값들만 필터링 (각 채널별로 독립적으로)
-            # Y와 Z가 음수 범위이므로, 절댓값이 작은 값들(0에 가까운 값)을 제외
-            threshold = 1e-3
-            
-            # 각 채널에서 유효한 값들만 선택
-            valid_x = valid_view[:, 0]
-            valid_y = valid_view[:, 1]
-            valid_z = valid_view[:, 2]
-            
-            # Y와 Z는 음수이므로 threshold보다 작은 값들만 (즉, 절댓값이 큰 값들)
-            mask_y = valid_y < -threshold
-            mask_z = valid_z < -threshold
-            
-            # X, Y, Z 좌표에서 min, max 구하기
-            view_min_x = valid_x.min()
-            view_max_x = valid_x.max()
-            
-            if mask_y.any():
-                view_min_y = valid_y[mask_y].min()
-                view_max_y = valid_y[mask_y].max()
-            else:
-                view_min_y = valid_y.min()
-                view_max_y = valid_y.max()
-            
-            if mask_z.any():
-                view_min_z = valid_z[mask_z].min()
-                view_max_z = valid_z[mask_z].max()
-            else:
-                view_min_z = valid_z.min()
-                view_max_z = valid_z.max()
+            # X, Y, Z 좌표에서 min, max 구하기 (마스크 0.1 이상인 영역만)
+            view_min_x = valid_view[:, 0].min()
+            view_max_x = valid_view[:, 0].max()
+            view_min_y = valid_view[:, 1].min()
+            view_max_y = valid_view[:, 1].max()
+            view_min_z = valid_view[:, 2].min()
+            view_max_z = valid_view[:, 2].max()
         else:
-            print("no valid")
             # 유효한 픽셀이 없는 경우 전체 범위 사용
             view_min_x = view[:, :, 0].min()
             view_max_x = view[:, :, 0].max()
@@ -149,16 +124,15 @@ if __name__ == "__main__":
         def normalize_channel(channel, min_val, max_val):
             return (channel - min_val) / (max_val - min_val + 1e-8)
         
-        # 먼저 view의 복사본을 만들고 배경을 min 값으로 설정 (정규화 시 0이 되도록)
-        view_for_norm = view.copy()
-        for c in range(3):
-            view_for_norm[:, :, c][~valid_mask] = [view_min_x, view_min_y, view_min_z][c]
-        
-        # 각 채널 정규화 (RGB만, 알파 채널은 제외)
+        # 각 채널 정규화 (마스크 영역만)
         view_norm = np.zeros_like(view)
-        view_norm[:, :, 0] = normalize_channel(view_for_norm[:, :, 0], view_min_x, view_max_x)
-        view_norm[:, :, 1] = normalize_channel(view_for_norm[:, :, 1], view_min_y, view_max_y)
-        view_norm[:, :, 2] = normalize_channel(view_for_norm[:, :, 2], view_min_z, view_max_z)
+        
+        # 마스크가 있는 영역에서만 정규화 수행
+        view_norm[valid_mask, 0] = normalize_channel(view[valid_mask, 0], view_min_x, view_max_x)
+        view_norm[valid_mask, 1] = normalize_channel(view[valid_mask, 1], view_min_y, view_max_y)
+        view_norm[valid_mask, 2] = normalize_channel(view[valid_mask, 2], view_min_z, view_max_z)
+        
+        # 마스크가 없는 영역은 이미 0으로 초기화되어 있음
         
         # 디버깅: 정규화 후 실제 값 범위 확인
         print(f"  Normalized ranges:")
@@ -166,9 +140,6 @@ if __name__ == "__main__":
         print(f"    X: [{valid_view_norm[:, 0].min():.4f}, {valid_view_norm[:, 0].max():.4f}]")
         print(f"    Y: [{valid_view_norm[:, 1].min():.4f}, {valid_view_norm[:, 1].max():.4f}]")
         print(f"    Z: [{valid_view_norm[:, 2].min():.4f}, {valid_view_norm[:, 2].max():.4f}]")
-        print(f"    Background: [{view_norm[~valid_mask][:, 0].min():.4f}, {view_norm[~valid_mask][:, 0].max():.4f}]")
-        
-        # 배경은 이미 0으로 정규화되어 있음 (min 값으로 설정했으므로)
 
         # 파일 저장 (RGB 채널만 사용)
         view_path = os.path.join(FLAGS.out_dir, f"view_{i:03d}.png")
