@@ -242,7 +242,7 @@ if __name__ == "__main__":
                 # gt_buffers = render.render_mesh_paper(gt_mesh, mv.unsqueeze(0), mvp.unsqueeze(0), FLAGS.display_res, return_types=["normal"], white_bg=True)
                 # gt_image = ((gt_buffers["normal"][0].detach().cpu().numpy()+1)/2*255).astype(np.uint8)
                 # imageio.imwrite(os.path.join(FLAGS.out_dir, '{:04d}.png'.format(it)), np.concatenate([val_image, gt_image], 1))
-                imageio.imwrite(os.path.join(FLAGS.out_dir, '{:04d}.png'.format(it)), val_image, 1)
+                imageio.imwrite(os.path.join(FLAGS.out_dir, '{:04d}.png'.format(it)), val_image)
                 print(f"Optimization Step [{it}/{FLAGS.iter}], Loss: {total_loss.item():.4f}")
             
     # ==============================================================================================
