@@ -149,9 +149,9 @@ if __name__ == "__main__":
         
         # 각 채널 정규화 (RGB만, 알파 채널은 제외)
         view_norm = np.zeros_like(view)
-        view_norm[:, 0] = normalize_channel(view[:, 0], view_min_x, view_max_x)
-        view_norm[:, 1] = normalize_channel(view[:, 1], view_min_y, view_max_y)
-        view_norm[:, 2] = normalize_channel(view[:, 2], view_min_z, view_max_z)
+        view_norm[:, :, 0] = normalize_channel(view[:, :, 0], view_min_x, view_max_x)
+        view_norm[:, :, 1] = normalize_channel(view[:, :, 1], view_min_y, view_max_y)
+        view_norm[:, :, 2] = normalize_channel(view[:, :, 2], view_min_z, view_max_z)
         
         # 디버깅: 정규화 후 실제 값 범위 확인 (마스크 적용 전)
         print(f"  Normalized ranges (before masking):")
