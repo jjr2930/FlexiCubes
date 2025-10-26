@@ -182,7 +182,7 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
             for batch_idx in range(img.shape[0]):
                 depth_img = img[batch_idx].cpu().numpy()
                 # depth 값을 0-255 범위로 정규화 (시각화를 위해)
-                depth_normalized = (depth_img[..., 2:3] - depth_img[..., 2:3].min()) / (depth_img[..., 2:3].max() - depth_img[..., 2:3].min() + 1e-8)
+                depth_normalized = (depth_img[..., 2] - depth_img[..., 2].min()) / (depth_img[..., 2].max() - depth_img[..., 2].min() + 1e-8)
                 depth_normalized = (depth_normalized * 255).astype(np.uint8)
                 imageio.imwrite(f"depth_image_{batch_idx}.png", depth_normalized)
 
