@@ -231,7 +231,13 @@ if __name__ == "__main__":
             })
 
         mv_stack = torch.stack(mv_batch).to(device)  # [B, 4, 4]
-        mvp_stack = torch.stack(mvp_batch).to(device)  # [B,
+        mvp_stack = torch.stack(mvp_batch).to(device)  # [B, 4, 4]
+        
+        # Stack target tensors from list of dicts to dict of tensors
+        target_stacked = {
+            'mask': torch.stack([t['mask'] for t in target]),  # [B, H, W, 1]
+            'depth': torch.stack([t['depth'] for t in target])  # [B, H, W, 4]
+        }
 
         # extract and render FlexiCubes mesh
         voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
@@ -242,8 +248,8 @@ if __name__ == "__main__":
         buffers = render.render_mesh_paper(flexicubes_mesh, mv_stack, mvp_stack, FLAGS.train_res)
         
         # evaluate reconstruction loss
-        mask_loss = (buffers['mask'] - target['mask']).abs().mean()
-        depth_loss = (((((buffers['depth'] - (target['depth']))* target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
+        mask_loss = (buffers['mask'] - target_stacked['mask']).abs().mean()
+        depth_loss = (((((buffers['depth'] - (target_stacked['depth']))* target_stacked['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
     
         t_iter = it / FLAGS.iter
         sdf_weight = FLAGS.sdf_regularizer - (FLAGS.sdf_regularizer - FLAGS.sdf_regularizer/20)*min(1.0, 4.0 * t_iter)
