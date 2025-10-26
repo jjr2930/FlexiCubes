@@ -208,10 +208,18 @@ def render_from_images(rgb_image, mask_image, depth_image, return_types = ["mask
     # 입력 텐서가 배치 차원이 없으면 추가
     if rgb_image.dim() == 3:
         rgb_image = rgb_image.unsqueeze(0)
+    elif rgb_image.dim() == 2:
+        rgb_image = rgb_image.unsqueeze(0).unsqueeze(-1)
+        
     if mask_image.dim() == 3:
         mask_image = mask_image.unsqueeze(0)
+    elif mask_image.dim() == 2:
+        mask_image = mask_image.unsqueeze(0).unsqueeze(-1)
+        
     if depth_image.dim() == 3:
         depth_image = depth_image.unsqueeze(0)
+    elif depth_image.dim() == 2:
+        depth_image = depth_image.unsqueeze(0).unsqueeze(-1)
     
     out_dict = {}
     

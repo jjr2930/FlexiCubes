@@ -36,16 +36,27 @@ class CameraItem:
 		return torch.from_numpy(np.array(img)).float() / 255.0
 	
 	def load_depth_image(self, working_directory: str) -> 'torch.Tensor':
-		"""Depth 이미지를 로드해 [H, W] torch.Tensor로 반환."""	
+		"""Depth 이미지를 로드해 [H, W, 4] torch.Tensor로 반환 (homogeneous coordinates)."""	
 		fullPath = Path(working_directory) / self.depth_path
 		img = Image.open(fullPath).convert("L")
-		return torch.from_numpy(np.array(img)).float() / 255.0
+		depth = torch.from_numpy(np.array(img)).float() / 255.0  # [H, W]
+		# homogeneous coordinates로 변환 [H, W, 4]
+		h, w = depth.shape
+		ones = torch.ones(h, w, 1)
+		depth_4d = torch.cat([
+			torch.zeros(h, w, 1),  # x
+			torch.zeros(h, w, 1),  # y
+			depth.unsqueeze(-1),    # z (depth)
+			ones                    # w
+		], dim=-1)
+		return depth_4d
 
 	def load_mask_image(self, working_directory: str) -> 'torch.Tensor':
-		"""Mask 이미지를 로드해 [H, W] torch.Tensor로 반환."""	
+		"""Mask 이미지를 로드해 [H, W, 1] torch.Tensor로 반환."""	
 		fullPath = Path(working_directory) / self.mask_path
 		img = Image.open(fullPath).convert("L")
-		return torch.from_numpy(np.array(img)).float() / 255.0
+		mask = torch.from_numpy(np.array(img)).float() / 255.0  # [H, W]
+		return mask.unsqueeze(-1)  # [H, W, 1]
 	
 	def to_pipeline_dict(self, working_directory: str):
 		"""이미지를 로드하고 배치 차원 없이 반환 (나중에 torch.stack으로 쌓음)."""
