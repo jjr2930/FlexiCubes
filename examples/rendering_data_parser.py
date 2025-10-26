@@ -28,23 +28,28 @@ class CameraItem:
 		"""4x4 행렬을 torch.Tensor로 변환."""
 		return torch.tensor(self.matrix, dtype=torch.float32, device=device)
 
-	def load_rgb_image(self) -> 'torch.Tensor':
+	def load_rgb_image(self, working_directory: str) -> 'torch.Tensor':
 		"""RGB 이미지를 로드해 [H, W, 3] torch.Tensor로 반환."""	
-		img = Image.open(self.rgb_path).convert("RGB")
+		fullPath = Path.joinpath(working_directory, self.rgb_path)
+		img = Image.open(fullPath).convert("RGB")
 		return torch.from_numpy(np.array(img)).float() / 255.0
 	
-	def load_depth_image(self) -> 'torch.Tensor':
+	def load_depth_image(self, working_directory: str) -> 'torch.Tensor':
 		"""Depth 이미지를 로드해 [H, W] torch.Tensor로 반환."""	
-		img = Image.open(self.depth_path).convert("L")
+		fullPath = Path.joinpath(working_directory, self.depth_path)
+		img = Image.open(fullPath).convert("L")
 		return torch.from_numpy(np.array(img)).float() / 255.0
 
-	def load_mask_image(self) -> 'torch.Tensor':
+	def load_mask_image(self, working_directory: str) -> 'torch.Tensor':
 		"""Mask 이미지를 로드해 [H, W] torch.Tensor로 반환."""	
-		img = Image.open(self.mask_path).convert("L")
+		fullPath = Path.joinpath(working_directory, self.mask_path)
+		img = Image.open(fullPath).convert("L")
 		return torch.from_numpy(np.array(img)).float() / 255.0
 	
-	def to_pipeline_dict(self):
-		return render.render_from_images(self.load_rgb_image(), self.load_mask_image(), self.load_depth_image())
+	def to_pipeline_dict(self, working_directory: str):
+		return render.render_from_images(self.load_rgb_image(working_directory=working_directory), 
+								   self.load_mask_image(working_directory=working_directory), 
+								   self.load_depth_image(working_directory=working_directory))
 
 
 @dataclass(frozen=True)

@@ -107,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
     parser.add_argument('-fc', '--focus_count', type=int, default= 0 )
     parser.add_argument('-ri', '--rendering_info', type=str, default=None)
+    parser.add_argument('-wd', '--working_directory', type=str, default=None)
 
 
     FLAGS = parser.parse_args()
