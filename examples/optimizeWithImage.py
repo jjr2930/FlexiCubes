@@ -185,7 +185,7 @@ if __name__ == "__main__":
         random_data = random.sample(data, FLAGS.batch)
 
         for item in random_data:
-            print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
+            #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
             minX = item['view_min_x']
             minY = item['view_min_y']
             minZ = item['view_min_z']
