@@ -12,6 +12,10 @@
             "depth_max_x" : -1.0,
             "depth_max_y" : -1.0,
             "depth_max_z" : -1.0,
+            "mv" : [[1.0, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, 0.0],
+                    [0.0, 0.0, 1.0, 3.0],
+                    [0.0, 0.0, 0.0, 1.0]],
             "depth_path" : "testDepth.png",
             "mask_path" :  "testMask.png"
         }

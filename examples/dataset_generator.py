@@ -158,6 +158,9 @@ if __name__ == "__main__":
         dataset_item["view_max_x"] = float(view_max_x)
         dataset_item["view_max_y"] = float(view_max_y)
         dataset_item["view_max_z"] = float(view_max_z)
+        #mv 행렬 저장
+        dataset_item["mv"] = mv.cpu().numpy().tolist()  # mv 행렬 저장
+        
 
         dataset["data"].append(dataset_item)
     

@@ -30,7 +30,8 @@ import sys
 sys.path.append('..')
 from flexicubes import FlexiCubes
 import random
-import rendering_data_parser
+
+import json
 
 ###############################################################################
 # Functions adapted from https://github.com/NVlabs/nvdiffrec
@@ -110,12 +111,24 @@ if __name__ == "__main__":
     parser.add_argument('-ri', '--rendering_info', type=str, default=None)
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
     parser.add_argument('-op', '--output_prefix', type=str, default=None)
-
-
+    parser.add_argument('-df', '--dataset_file', type=str, default=None)
 
     FLAGS = parser.parse_args()
     device = 'cuda'
-    
+
+    dataset_file = FLAGS.dataset_file
+    if dataset_file is None:
+       raise ValueError("Dataset file must be specified.")
+
+    json_doc = json.load(open(dataset_file, 'r'))
+
+    fov = json_doc['fovy']
+    near_clip = json_doc['near']
+    far_clip = json_doc['far']
+    res_width = json_doc['res_width']
+    res_height = json_doc['res_height']
+    data = json_doc['data']
+
     os.makedirs(FLAGS.out_dir, exist_ok=True)
     glctx = dr.RasterizeGLContext()
     
@@ -174,8 +187,7 @@ if __name__ == "__main__":
     start_time = time.time()
     print_now_time()
     
-    renderedImage = rendering_data_parser.load_camera_dataset(FLAGS.rendering_info)
-
+    
     def apply_mv_fix(mv_batch: torch.Tensor) -> torch.Tensor:
         # mv_batch: [B,4,4]
         if FLAGS.mv_fix == 'none':
@@ -225,12 +237,16 @@ if __name__ == "__main__":
     # ==============================================================================================   
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
-        randomRenderingInfo = renderedImage.get_random_items(FLAGS.batch)
-        proj = renderedImage.get_torch_projection_matrix(device=device)  # [4,4]
+
+        proj = perspective(fovy=np.deg2rad(fov), aspect=res_width/res_height, n=near_clip, f=far_clip, device=device)
         mv = []
         # mvp will be recomputed after mv fix and model composition
         target = []
-        for item in randomRenderingInfo:
+
+        #batch 갯수만큼 data에서 랜덤으로 선택
+        random_data = random.sample(data, FLAGS.batch)
+
+        for item in random_data:
             mv.append(item.to_torch_matrix(device=device))
             target.append(item.to_pipeline_dict(FLAGS.working_directory, 
                                                 near_clip=renderedImage.near_clip, 
