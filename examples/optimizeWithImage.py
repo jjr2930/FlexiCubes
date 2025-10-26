@@ -175,6 +175,13 @@ if __name__ == "__main__":
             'mask': torch.stack([t['mask'] for t in target],0).to(device),
             'depth': torch.stack([t['depth'] for t in target],0).to(device)
         }
+        
+        # 디버깅: 텐서 shape 출력
+        if it == 0:
+            print(f"DEBUG - mv shape: {mv.shape}")
+            print(f"DEBUG - mvp shape: {mvp.shape}")
+            print(f"DEBUG - target['mask'] shape: {target['mask'].shape}")
+            print(f"DEBUG - target['depth'] shape: {target['depth'].shape}")
 
         # extract and render FlexiCubes mesh
         voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
@@ -183,6 +190,11 @@ if __name__ == "__main__":
             gamma_f=weight[:,20], training=True)
         flexicubes_mesh = Mesh(vertices, faces)
         buffers = render.render_mesh_paper(flexicubes_mesh, mv, mvp, FLAGS.train_res)
+        
+        # 디버깅: 버퍼 shape 출력
+        if it == 0:
+            print(f"DEBUG - buffers['mask'] shape: {buffers['mask'].shape}")
+            print(f"DEBUG - buffers['depth'] shape: {buffers['depth'].shape}")
         
         # evaluate reconstruction loss
         mask_loss = (buffers['mask'] - target['mask']).abs().mean()
