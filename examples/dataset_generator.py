@@ -52,10 +52,12 @@ if __name__ == "__main__":
     cam_far = FLAGS.cam_far
 
     mvstack, mvpstack = [], []
-    azimuth_delta = 360.0/FLAGS.azimuth_step
-    for azimuth in range(0.0, 360.0, azimuth_delta):
-        mv, mvp = render.orbit(0, azimuth=azimuth, radius=radius, 
-                            lookPosition=lookPosition, 
+    azimuth_delta = 360.0 / FLAGS.azimuth_step
+    azimuth_steps = int(360.0 / azimuth_delta)
+    for i in range(azimuth_steps):
+        azimuth = i * azimuth_delta
+        mv, mvp = render.orbit(0, azimuth=np.deg2rad(azimuth), radius=radius, 
+                            offset=tuple(lookPosition), 
                             fovy=np.deg2rad(fovy), 
                             iter_res=render_resolution, 
                             cam_near_far=[cam_near, cam_far],
