@@ -172,7 +172,7 @@ if __name__ == "__main__":
     #  Train loop
     # ==============================================================================================   
     for it in range(FLAGS.iter): 
-        print(time_to_string(time.time(), prefix=f"Iteration {it} : "))
+        print(time_to_string(time.time(), prefix=f"Iteration {it}"))
         optimizer.zero_grad()
 
         proj = perspective(fovy=np.deg2rad(fov), aspect=res_width/res_height, n=near_clip, f=far_clip, device=device)
