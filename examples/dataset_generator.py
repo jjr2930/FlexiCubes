@@ -92,17 +92,24 @@ if __name__ == "__main__":
         torch.cuda.empty_cache()
 
         #view -> 뷰 공간 좌표계로 변환된 좌표들이야 나는 이걸 0~1 사이로 정규화된 값으로 바꾸고싶다구
-        #view에서 x,y,z 별로 min, max 구하기
-        view_min_x = view[:, 0].min()
-        view_max_x = view[:, 0].max()
-
-        # Y 좌표에서 min, max
-        view_min_y = view[:, 1].min()
-        view_max_y = view[:, 1].max()
-
-        # Z 좌표에서 min, max
-        view_min_z = view[:, 2].min()
-        view_max_z = view[:, 2].max()
+        # 마스크 값이 0.1 이상인 부분만 사용하여 min, max 계산
+        valid_mask = mask[..., 0] >= 0.1  # [H, W]
+        
+        # valid_mask를 사용하여 유효한 view 좌표만 선택
+        valid_view = view[valid_mask]  # [N, 4] where N is number of valid pixels
+        
+        if len(valid_view) > 0:
+            # X, Y, Z 좌표에서 min, max 구하기
+            view_min_x = valid_view[:, 0].min()
+            view_max_x = valid_view[:, 0].max()
+            view_min_y = valid_view[:, 1].min()
+            view_max_y = valid_view[:, 1].max()
+            view_min_z = valid_view[:, 2].min()
+            view_max_z = valid_view[:, 2].max()
+        else:
+            # 유효한 픽셀이 없는 경우 기본값 사용
+            view_min_x = view_min_y = view_min_z = 0.0
+            view_max_x = view_max_y = view_max_z = 1.0
 
         # 정규화 함수
         def normalize_channel(channel, min_val, max_val):
