@@ -99,6 +99,7 @@ if __name__ == "__main__":
         valid_view = view[valid_mask]  # [N, 4] where N is number of valid pixels
         
         if len(valid_view) > 0:
+            print('valid_view shape:', valid_view.shape)
             # X, Y, Z 좌표에서 min, max 구하기
             view_min_x = valid_view[:, 0].min()
             view_max_x = valid_view[:, 0].max()
@@ -107,6 +108,7 @@ if __name__ == "__main__":
             view_min_z = valid_view[:, 2].min()
             view_max_z = valid_view[:, 2].max()
         else:
+            print('No valid view pixels found.')
             # 유효한 픽셀이 없는 경우 기본값 사용
             view_min_x = view_min_y = view_min_z = 0.0
             view_max_x = view_max_y = view_max_z = 1.0
