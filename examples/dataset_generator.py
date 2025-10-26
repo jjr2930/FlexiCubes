@@ -10,7 +10,6 @@ import render
 import loss
 import imageio
 from datetime import datetime, timezone, timedelta
-import dataset_parser
 
 import sys
 sys.path.append('..')
@@ -62,9 +61,10 @@ if __name__ == "__main__":
                             device=device)
         mvstack.append(mv)
         mvpstack.append(mvp)
+        azimuth += FLAGS.azimth_step
     
     rendered = render.render_mesh_paper(gt_mesh, mv, mvp, render_resolution)
-    #rgb는 저장하지 않는다.
+    
     depth = rendered['depth'].cpu().numpy()
     mask = rendered['mask'].cpu().numpy()
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     
     #데이터셋 json 저장
     dataset_json_path = os.path.join(FLAGS.out_dir, "dataset.json")
-    
+
     #json으로 저장
     with open(dataset_json_path, 'w') as f:
         json.dump(dataset, f, indent=4)
