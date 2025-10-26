@@ -206,16 +206,32 @@ def recorver_view_position(normalized_view, mask, min_x, max_x, min_y, max_y, mi
     view = torch.zeros_like(normalized_view)
 
     # 마스크가 있는 영역에서만 복원 수행
-    valid_mask = mask[..., 0:1] >= 0.1  # [H, W, 1] - 브로드캐스팅을 위해 채널 차원 유지
+    valid_mask = mask[..., 0] >= 0.1  # [H, W]
 
-    # min, max를 텐서로 만들어 한 번에 계산 [1, 1, 3]
-    device = normalized_view.device
-    min_xyz = torch.tensor([min_x, min_y, min_z], device=device, dtype=normalized_view.dtype).view(1, 1, 3)
-    max_xyz = torch.tensor([max_x, max_y, max_z], device=device, dtype=normalized_view.dtype).view(1, 1, 3)
-    
-    # X, Y, Z 좌표 한 번에 복원 (마스크 영역만)
-    restored_xyz = normalized_view[..., :3] * (max_xyz - min_xyz) + min_xyz
-    view[..., :3] = torch.where(valid_mask, restored_xyz, view[..., :3])
+    # X, Y, Z 좌표 복원 (마스크 영역만)
+    view[..., 0] = torch.where(valid_mask, normalized_view[..., 0] * (max_x - min_x) + min_x, view[..., 0])
+    view[..., 1] = torch.where(valid_mask, normalized_view[..., 1] * (max_y - min_y) + min_y, view[..., 1])
+    view[..., 2] = torch.where(valid_mask, normalized_view[..., 2] * (max_z - min_z) + min_z, view[..., 2])
+
+    return view
+
+def recorver_view_position(normalized_view, mask, min_x, max_x, min_y, max_y, min_z, max_z):
+    """
+    정규화된 뷰 공간 좌표를 원래 뷰 공간 좌표로 복원
+    normalized_view: [H, W, x,y,z,w] 0~1 사이로 정규화된 뷰 공간 좌표
+    mask: [H, W, 1] 마스크 이미지
+    min_x, max_x, min_y, max_y, min_z, max_z: 각 축의 최소/최대 값
+    Returns: 복원된 뷰 공간 좌표 [H, W, x,y,z,w]
+    """
+    view = torch.zeros_like(normalized_view)
+
+    # 마스크가 있는 영역에서만 복원 수행
+    valid_mask = mask[..., 0] >= 0.1  # [H, W]
+
+    # X, Y, Z 좌표 복원 (마스크 영역만)
+    view[..., 0] = torch.where(valid_mask, normalized_view[..., 0] * (max_x - min_x) + min_x, view[..., 0])
+    view[..., 1] = torch.where(valid_mask, normalized_view[..., 1] * (max_y - min_y) + min_y, view[..., 1])
+    view[..., 2] = torch.where(valid_mask, normalized_view[..., 2] * (max_z - min_z) + min_z, view[..., 2])
 
     return view
 
