@@ -27,7 +27,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='flexicubes optimization')
     parser.add_argument('-o', '--out_dir', type=str, default=None)
     parser.add_argument('-rm', '--ref_mesh', type=str)    
-    parser.add_argument('-as', '--azimth_step', type=int, default=10)
+    parser.add_argument('-as', '--azimuth_step', type=int, default=10)
     parser.add_argument('-rd', '--radius', type=float, default=2.0)
     parser.add_argument('-rr', '--rendering_resolution', nargs=2, type=int, default=[2048,2048])
     parser.add_argument('-lp', '--look_position', nargs=3, type=float, default=[0.0, 0.0, 0.0])
