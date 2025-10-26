@@ -209,8 +209,8 @@ def recorver_view_position(normalized_view, mask, min_x, max_x, min_y, max_y, mi
     valid_mask = mask[..., 0] >= 0.1  # [H, W]
 
     # X, Y, Z 좌표 복원 (마스크 영역만)
-    view[valid_mask, 0] = normalized_view[valid_mask, 0] * (max_x - min_x) + min_x
-    view[valid_mask, 1] = normalized_view[valid_mask, 1] * (max_y - min_y) + min_y
-    view[valid_mask, 2] = normalized_view[valid_mask, 2] * (max_z - min_z) + min_z
+    view[..., 0] = torch.where(valid_mask, normalized_view[..., 0] * (max_x - min_x) + min_x, view[..., 0])
+    view[..., 1] = torch.where(valid_mask, normalized_view[..., 1] * (max_y - min_y) + min_y, view[..., 1])
+    view[..., 2] = torch.where(valid_mask, normalized_view[..., 2] * (max_z - min_z) + min_z, view[..., 2])
 
     return view
