@@ -235,7 +235,7 @@ if __name__ == "__main__":
         mv_stack = torch.stack(mv_batch).to(device)  # [B, 4, 4]
         mvp_stack = torch.stack(mvp_batch).to(device)  # [B, 4, 4]
 
-        print(time_to_string(time.time(), prefix="Before stacking targets"))
+        #print(time_to_string(time.time(), prefix="Before stacking targets"))
 
         # Stack target tensors from list of dicts to dict of tensors
         target_stacked = {
@@ -262,7 +262,7 @@ if __name__ == "__main__":
         reg_loss += (weight[:,:20]).abs().mean() * 0.1
         total_loss = mask_loss + depth_loss + reg_loss
 
-        print(time_to_string(time.time(), prefix="After computing losses"));
+        #print(time_to_string(time.time(), prefix="After computing losses"));
 
         # if FLAGS.sdf_loss: # optionally add SDF loss to eliminate internal structures
         #     with torch.no_grad():
