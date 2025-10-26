@@ -185,6 +185,8 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
                 depth_normalized = (depth_img[..., 2] - depth_img[..., 2].min()) / (depth_img[..., 2].max() - depth_img[..., 2].min() + 1e-8)
                 depth_normalized = (depth_normalized * 255).astype(np.uint8)
                 imageio.imwrite(f"depth_image_{batch_idx}.png", depth_normalized)
+                #저장되는 디렉토리 풀패스 출력
+                print(f"Depth image saved at: {os.path.abspath(f'depth_image_{batch_idx}.png')}")
 
         elif type == "normal" :
             normal_indices = (torch.arange(0, mesh.nrm.shape[0], dtype=torch.int64, device='cuda')[:, None]).repeat(1, 3)
