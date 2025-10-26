@@ -185,12 +185,13 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
                 print(depth_img.shape)
                 for width in range(depth_img.shape[1]):
                     for height in range(depth_img.shape[0]):
-                        # depth_img rgba(xyzw)의 에서 xyzw
-                        x = depth_img[width,height, 0]
-                        y = depth_img[width,height, 1]
-                        z = depth_img[width,height, 2]
-                        w = depth_img[width,height, 3]
-                        print(f"Depth image XYZW values: {x}, {y}, {z}, {w}")
+                        if(x != 0 and y !=0 and z !=0 and w !=0):
+                            # depth_img rgba(xyzw)의 에서 xyzw
+                            x = depth_img[width,height, 0]
+                            y = depth_img[width,height, 1]
+                            z = depth_img[width,height, 2]
+                            w = depth_img[width,height, 3]
+                            print(f"Depth image XYZW values: {x}, {y}, {z}, {w}")
 
 
                 # depth 값을 0-255 범위로 정규화 (시각화를 위해)
