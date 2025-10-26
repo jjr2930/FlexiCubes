@@ -172,7 +172,7 @@ if __name__ == "__main__":
     #  Train loop
     # ==============================================================================================   
     for it in range(FLAGS.iter): 
-        time_to_string(time.time(), prefix=f"Iteration {it}")
+        print(time_to_string(time.time(), prefix=f"Iteration {it}"))
         optimizer.zero_grad()
 
         proj = perspective(fovy=np.deg2rad(fov), aspect=res_width/res_height, n=near_clip, f=far_clip, device=device)
@@ -185,7 +185,7 @@ if __name__ == "__main__":
         random_data = random.sample(data, FLAGS.batch)
 
         for item in random_data:
-            time_to_string(time.time(), prefix=f"Processing {item['view_path']}")
+            print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
             minX = item['view_min_x']
             minY = item['view_min_y']
             minZ = item['view_min_z']
@@ -234,8 +234,8 @@ if __name__ == "__main__":
 
         mv_stack = torch.stack(mv_batch).to(device)  # [B, 4, 4]
         mvp_stack = torch.stack(mvp_batch).to(device)  # [B, 4, 4]
-        
-        time_to_string(time.time(), prefix="Before stacking targets")
+
+        print(time_to_string(time.time(), prefix="Before stacking targets"))
 
         # Stack target tensors from list of dicts to dict of tensors
         target_stacked = {
@@ -262,7 +262,7 @@ if __name__ == "__main__":
         reg_loss += (weight[:,:20]).abs().mean() * 0.1
         total_loss = mask_loss + depth_loss + reg_loss
 
-        time_to_string(time.time(), prefix="After computing losses")
+        print(time_to_string(time.time(), prefix="After computing losses"));
 
         # if FLAGS.sdf_loss: # optionally add SDF loss to eliminate internal structures
         #     with torch.no_grad():
