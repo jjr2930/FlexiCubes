@@ -84,52 +84,53 @@ if __name__ == "__main__":
         # 렌더링
         rendered = render.render_mesh_paper(gt_mesh, mv_batch, mvp_batch, render_resolution)
         
-        depth = rendered['depth'][0].cpu().numpy()  # [H, W, 4]
+        view = rendered['depth'][0].cpu().numpy()  # [H, W, 4]
         mask = rendered['mask'][0].cpu().numpy()    # [H, W, 1]
         
         # 메모리 정리
         del rendered
         torch.cuda.empty_cache()
+
+        #view -> 뷰 공간 좌표계로 변환된 좌표들이야 나는 이걸 0~1 사이로 정규화된 값으로 바꾸고싶다구
+        #view에서 x,y,z 별로 min, max 구하기
+        view_min_x = view[:, 0].min()
+        view_max_x = view[:, 0].max()
+
+        # Y 좌표에서 min, max
+        view_min_y = view[:, 1].min()
+        view_max_y = view[:, 1].max()
+
+        # Z 좌표에서 min, max
+        view_min_z = view[:, 2].min()
+        view_max_z = view[:, 2].max()
+
+        # 정규화 함수
+        def normalize_channel(channel, min_val, max_val):
+            return (channel - min_val) / (max_val - min_val + 1e-8)
         
-        # 각 이미지의 마스크 영역에서 depth 값의 min/max 계산
-        current_mask = mask[..., 0] > 0  # [H, W]
-        
-        # 마스크 영역의 depth 좌표들
-        masked_depth = depth[current_mask]  # [N, 4]
-        
-        if len(masked_depth) > 0:
-            # 각 채널(x, y, z)의 min/max 계산
-            depth_min = masked_depth[:, :3].min(axis=0)  # [3] (x, y, z)
-            depth_max = masked_depth[:, :3].max(axis=0)  # [3] (x, y, z)
-            
-            # depth를 0~1로 정규화 (Z 채널만 사용)
-            depth_z = depth[..., 2]  # [H, W]
-            depth_z_min = masked_depth[:, 2].min()
-            depth_z_max = masked_depth[:, 2].max()
-            depth_norm = (depth_z - depth_z_min) / (depth_z_max - depth_z_min + 1e-8)
-        else:
-            # 마스크가 비어있는 경우 기본값
-            depth_min = np.array([-1.0, -1.0, -1.0])
-            depth_max = np.array([-1.0, -1.0, -1.0])
-            depth_norm = depth[..., 2]
-        
+        # 각 채널 정규화
+        view_norm = np.zeros_like(view)
+        view_norm[:, 0] = normalize_channel(view[:, 0], view_min_x, view_max_x)
+        view_norm[:, 1] = normalize_channel(view[:, 1], view_min_y, view_max_y)
+        view_norm[:, 2] = normalize_channel(view[:, 2], view_min_z, view_max_z)
+
         # 파일 저장
-        depth_path = os.path.join(FLAGS.out_dir, f"depth_{i:03d}.png")
+        view_path = os.path.join(FLAGS.out_dir, f"view_{i:03d}.png")
         mask_path = os.path.join(FLAGS.out_dir, f"mask_{i:03d}.png")
 
-        imageio.imwrite(depth_path, (depth_norm * 255).astype(np.uint8))
+        imageio.imwrite(view_path, (view_norm * 255).astype(np.uint8))
         imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
         
         # 데이터셋 항목 추가
         dataset_item = dict()
-        dataset_item["depth_path"] = os.path.basename(depth_path)
+        dataset_item["view_path"] = os.path.basename(view_path)
         dataset_item["mask_path"] = os.path.basename(mask_path)
-        dataset_item["depth_min_x"] = float(depth_min[0])
-        dataset_item["depth_min_y"] = float(depth_min[1])
-        dataset_item["depth_min_z"] = float(depth_min[2])
-        dataset_item["depth_max_x"] = float(depth_max[0])
-        dataset_item["depth_max_y"] = float(depth_max[1])
-        dataset_item["depth_max_z"] = float(depth_max[2])
+        dataset_item["view_min_x"] = float(view_min_x)
+        dataset_item["view_min_y"] = float(view_min_y)
+        dataset_item["view_min_z"] = float(view_min_z)
+        dataset_item["view_max_x"] = float(view_max_x)
+        dataset_item["view_max_y"] = float(view_max_y)
+        dataset_item["view_max_z"] = float(view_max_z)
 
         dataset["data"].append(dataset_item)
     
