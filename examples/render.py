@@ -194,10 +194,14 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
                             print(f"Depth image XYZW values: {x}, {y}, {z}, {w}")
 
 
-                # depth 값을 0-255 범위로 정규화 (시각화를 위해)
-                depth_normalized = (depth_img[..., 2] - depth_img[..., 2].min()) / (depth_img[..., 2].max() - depth_img[..., 2].min() + 1e-8)
-                depth_normalized = (depth_normalized * 255).astype(np.uint8)
-                imageio.imwrite(f"depth_image_{batch_idx}.png", depth_normalized)
+                #그냥 xyzw가 rgba라고 생각하고 저장해봐
+                depth_rgba = np.zeros((depth_img.shape[0], depth_img.shape[1], 4), dtype=np.uint8)
+                depth_rgba[..., 0] = depth_img[..., 0]  # R
+                depth_rgba[..., 1] = depth_img[..., 1]  # G
+                depth_rgba[..., 2] = depth_img[..., 2]  # B
+                depth_rgba[..., 3] = depth_img[..., 3]  # A
+
+                imageio.imwrite(f"depth_image_{batch_idx}.png", depth_rgba)
 
         elif type == "normal" :
             normal_indices = (torch.arange(0, mesh.nrm.shape[0], dtype=torch.int64, device='cuda')[:, None]).repeat(1, 3)
