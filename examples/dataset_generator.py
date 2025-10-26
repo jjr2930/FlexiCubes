@@ -52,16 +52,20 @@ if __name__ == "__main__":
     cam_far = FLAGS.cam_far
 
     mvstack, mvpstack = [], []
-    for azimuth in range(0.0, 360):
+    azimuth_delta = 360.0/FLAGS.azimuth_step
+    for azimuth in range(0.0, 360.0, azimuth_delta):
         mv, mvp = render.orbit(0, azimuth=azimuth, radius=radius, 
                             lookPosition=lookPosition, 
                             fovy=np.deg2rad(fovy), 
                             iter_res=render_resolution, 
                             cam_near_far=[cam_near, cam_far],
                             device=device)
+    
         mvstack.append(mv)
         mvpstack.append(mvp)
-        azimuth += FLAGS.azimth_step
+
+    mv = torch.stack(mvstack).to(device)
+    mvp = torch.stack(mvpstack).to(device)
     
     rendered = render.render_mesh_paper(gt_mesh, mv, mvp, render_resolution)
     
