@@ -57,7 +57,7 @@ if __name__ == "__main__":
     for i in range(azimuth_steps):
         azimuth = i * azimuth_delta
         mv, mvp = render.orbit(0, azimuth=np.deg2rad(azimuth), radius=radius, 
-                            offset=tuple(lookPosition), 
+                            lookPosition=lookPosition, 
                             fovy=np.deg2rad(fovy), 
                             iter_res=render_resolution, 
                             cam_near_far=[cam_near, cam_far],
