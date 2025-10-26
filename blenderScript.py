@@ -10,6 +10,8 @@ from mathutils import Matrix, Vector
 OUT_DIR = "/Users/jujeong-yeol/Documents/blenderOutput/b1"
 IMG_DIR = os.path.join(OUT_DIR, "images")
 MASK_DIR = os.path.join(OUT_DIR, "masks")
+NORMAL_DIR = os.path.join(OUT_DIR, "normals")
+DEPTH_DIR = os.path.join(OUT_DIR, "depth")
 
 W, H = 1024, 1024
 FOCAL_MM = 35.0
@@ -31,18 +33,22 @@ CYCLES_SAMPLES = 64
 # ==== 준비 ====
 os.makedirs(IMG_DIR, exist_ok=True)
 os.makedirs(MASK_DIR, exist_ok=True)
+os.makedirs(NORMAL_DIR, exist_ok=True)
+os.makedirs(DEPTH_DIR, exist_ok=True)
 scene = bpy.context.scene
 
 # --- 엔진 자동 선택(3.x/4.x 호환) ---
 engine_keys = set(bpy.types.RenderSettings.bl_rna.properties['engine'].enum_items.keys())
-if 'BLENDER_EEVEE' in engine_keys:
-    scene.render.engine = 'BLENDER_EEVEE'
-elif 'BLENDER_EEVEE_NEXT' in engine_keys:
-    scene.render.engine = 'BLENDER_EEVEE_NEXT'
-elif 'CYCLES' in engine_keys:
-    scene.render.engine = 'CYCLES'
+preferred_engines = ['CYCLES', 'BLENDER_EEVEE', 'BLENDER_EEVEE_NEXT']
+for engine in preferred_engines:
+    if engine in engine_keys:
+        scene.render.engine = engine
+        break
 else:
     raise RuntimeError(f"지원 렌더 엔진을 찾을 수 없습니다: {engine_keys}")
+
+if scene.render.engine != 'CYCLES':
+    print("⚠️ Cycles 엔진을 찾지 못해", scene.render.engine, "로 렌더링합니다. Normal/Depth 패스가 비활성일 수 있습니다.")
 
 # --- 해상도/색관리/포맷 ---
 scene.render.resolution_x = W
@@ -56,6 +62,13 @@ scene.render.film_transparent = BG_TRANSPARENT
 scene.render.image_settings.color_mode = 'RGBA' if BG_TRANSPARENT else 'RGB'
 if scene.render.engine == 'CYCLES':
     scene.cycles.samples = CYCLES_SAMPLES
+scene.render.use_save_buffers = True
+
+# --- View Layer Pass 설정 ---
+active_view_layer = bpy.context.view_layer
+active_view_layer.use_pass_normal = True
+active_view_layer.use_pass_z = True
+ACTIVE_VIEW_LAYER_NAME = active_view_layer.name
 
 # --- 카메라 준비 ---
 cam_obj = next((o for o in bpy.data.objects if o.type == 'CAMERA'), None)
@@ -91,14 +104,13 @@ def align_sun_to_camera(cam_obj, sun_obj):
     카메라의 forward(-Z) 방향을 Sun의 조명 방향과 일치시킨다.
     즉, 카메라가 바라보는 방향으로 태양빛이 들어오게 함.
     """
-    import mathutils
     # 카메라의 forward(-Z) 방향
     cam_forward = -cam_obj.matrix_world.to_3x3().col[2].normalized()
     up = Vector((0, 0, 1))
     right = cam_forward.cross(up).normalized()
     up_corrected = right.cross(cam_forward).normalized()
 
-    rot = mathutils.Matrix((
+    rot = Matrix((
         (right.x, up_corrected.x, -cam_forward.x),
         (right.y, up_corrected.y, -cam_forward.y),
         (right.z, up_corrected.z, -cam_forward.z)
@@ -122,112 +134,113 @@ def look_at(cam_obj, target):
     ))
     cam_obj.matrix_world = Matrix.Translation(cam_obj.location) @ rot
 
-# --- 마스크 렌더링 함수들 (render.py의 안티앨리어싱 마스크 개념 구현) ---
-def setup_mask_materials():
-    """모든 오브젝트에 마스크용 흰색 재질 적용"""
-    # 마스크용 재질 생성 또는 가져오기
-    mask_mat_name = "MaskMaterial"
-    mask_mat = bpy.data.materials.get(mask_mat_name)
-    
-    if mask_mat is None:
-        mask_mat = bpy.data.materials.new(name=mask_mat_name)
-        mask_mat.use_nodes = True
-        nodes = mask_mat.node_tree.nodes
-        nodes.clear()
-        
-        # 출력 노드 추가
-        output_node = nodes.new(type='ShaderNodeOutputMaterial')
-        
-        # Emission 셰이더 추가 (흰색 마스크용)
-        emission_node = nodes.new(type='ShaderNodeEmission')
-        emission_node.inputs['Color'].default_value = (1.0, 1.0, 1.0, 1.0)  # 흰색
-        emission_node.inputs['Strength'].default_value = 1.0
-        
-        # 노드 연결
-        mask_mat.node_tree.links.new(emission_node.outputs['Emission'], output_node.inputs['Surface'])
-        
-    return mask_mat
+# --- 렌더 패스 추출 + 저장 유틸리티 ---
+def _ensure_render_layer(render_image, view_layer_name):
+    for attr in ("view_layers", "render_layers", "layers"):
+        container = getattr(render_image, attr, None)
+        if container is None:
+            continue
+        layer = None
+        if hasattr(container, "get"):
+            layer = container.get(view_layer_name)
+        else:
+            for candidate in container:
+                if getattr(candidate, "name", None) == view_layer_name:
+                    layer = candidate
+                    break
+        if layer is not None:
+            return layer
+    return None
 
-def apply_mask_materials(mask_material):
-    """모든 메시 오브젝트에 마스크 재질 적용"""
-    original_materials = {}
-    
-    for obj in bpy.data.objects:
-        if obj.type == 'MESH' and obj.visible_get():
-            original_materials[obj.name] = []
-            
-            # 기존 재질 백업
-            for slot in obj.material_slots:
-                original_materials[obj.name].append(slot.material)
-            
-            # 모든 재질 슬롯을 마스크 재질로 교체
-            for i, slot in enumerate(obj.material_slots):
-                slot.material = mask_material
-                
-            # 재질 슬롯이 없는 경우 추가
-            if len(obj.material_slots) == 0:
-                obj.data.materials.append(mask_material)
-                
-    return original_materials
+def _extract_render_pass(render_layer, *pass_names):
+    passes = getattr(render_layer, "passes", [])
+    lookup = {p.name: p for p in passes}
+    for name in pass_names:
+        if name in lookup:
+            return lookup[name]
+    return None
 
-def restore_original_materials(original_materials):
-    """원래 재질로 복원"""
-    for obj_name, materials in original_materials.items():
-        obj = bpy.data.objects.get(obj_name)
-        if obj and obj.type == 'MESH':
-            for i, material in enumerate(materials):
-                if i < len(obj.material_slots):
-                    obj.material_slots[i].material = material
-
-def render_mask_image(frame_idx):
-    """마스크 이미지 렌더링 - render.py의 (rast[..., -1:] > 0).float() 개념을 Blender로 구현"""
-    # 마스크용 재질 설정
-    mask_material = setup_mask_materials()
-    
-    # 기존 재질 백업 및 마스크 재질 적용
-    original_materials = apply_mask_materials(mask_material)
-    
-    # 마스크 렌더링 설정
-    original_bg = scene.render.film_transparent
-    original_engine = scene.render.engine
-    original_color_mode = scene.render.image_settings.color_mode
-    
-    scene.render.film_transparent = False  # 마스크는 불투명 배경
-    scene.render.engine = 'BLENDER_WORKBENCH'  # 빠른 렌더링을 위해
-    scene.render.image_settings.color_mode = 'RGB'  # RGB로 설정
-    
-    # 월드 배경을 검은색으로 설정
-    original_bg_color = None
-    if bpy.context.scene.world:
-        world = bpy.context.scene.world
-        if world.use_nodes:
-            bg_node = world.node_tree.nodes.get('Background')
-            if bg_node:
-                original_bg_color = bg_node.inputs['Color'].default_value[:]
-                bg_node.inputs['Color'].default_value = (0.0, 0.0, 0.0, 1.0)  # 검은색
-    
+def _save_image(filepath, pixels, width, height, *, float_buffer=False, file_format='PNG', colorspace='Linear'):
+    image_name = os.path.basename(filepath)
+    image = bpy.data.images.new(image_name, width=width, height=height, alpha=True, float_buffer=float_buffer)
+    image.pixels = pixels
+    image.filepath_raw = filepath
+    image.file_format = file_format
     try:
-        # 마스크 이미지 렌더링
-        mask_name = f"mask_{frame_idx:03d}.png"
-        mask_path = os.path.join(MASK_DIR, mask_name)
-        scene.render.filepath = mask_path
-        bpy.ops.render.render(write_still=True)
-        print(f"  └─ Mask saved: {mask_name}")
-        
-    finally:
-        # 설정 복원
-        scene.render.film_transparent = original_bg
-        scene.render.engine = original_engine
-        scene.render.image_settings.color_mode = original_color_mode
-        
-        # 배경색 복원
-        if original_bg_color is not None and bpy.context.scene.world and bpy.context.scene.world.use_nodes:
-            bg_node = bpy.context.scene.world.node_tree.nodes.get('Background')
-            if bg_node:
-                bg_node.inputs['Color'].default_value = original_bg_color
-        
-        # 재질 복원
-        restore_original_materials(original_materials)
+        image.colorspace_settings.name = colorspace
+    except Exception:
+        pass
+    image.save()
+    bpy.data.images.remove(image)
+
+def _convert_normal_pixels(pass_rect):
+    pixels = []
+    for i in range(0, len(pass_rect), 4):
+        nx, ny, nz = pass_rect[i], pass_rect[i + 1], pass_rect[i + 2]
+        # Blender normal은 [-1, 1] -> [0, 1]로 매핑
+        pixels.extend([
+            0.5 * nx + 0.5,
+            0.5 * ny + 0.5,
+            0.5 * nz + 0.5,
+            1.0,
+        ])
+    return pixels
+
+def _convert_depth_pixels(pass_rect):
+    raw_pixels = []
+    mask_pixels = []
+    valid_depths = [d for d in pass_rect[::4] if math.isfinite(d) and d > 0.0]
+    min_depth = min(valid_depths) if valid_depths else 0.0
+    max_depth = max(valid_depths) if valid_depths else 0.0
+
+    for i in range(0, len(pass_rect), 4):
+        depth_value = pass_rect[i]
+        if math.isfinite(depth_value) and depth_value > 0.0:
+            raw_val = depth_value
+            mask_val = 1.0
+        else:
+            raw_val = 0.0
+            mask_val = 0.0
+
+        raw_pixels.extend([raw_val, raw_val, raw_val, 1.0])
+        mask_pixels.extend([mask_val, mask_val, mask_val, 1.0])
+
+    return raw_pixels, mask_pixels, min_depth, max_depth
+
+def save_auxiliary_passes(frame_idx, view_layer_name):
+    render_result = bpy.data.images.get("Render Result")
+    if render_result is None or not render_result.has_data:
+        print("  ⚠️ Render result unavailable for auxiliary passes.")
+        return
+
+    render_layer = _ensure_render_layer(render_result, view_layer_name)
+    if render_layer is None:
+        print(f"  ⚠️ View layer '{view_layer_name}' not found in render result.")
+        return
+
+    width, height = render_result.size
+    normal_pass = _extract_render_pass(render_layer, "Normal", "NORMAL")
+    depth_pass = _extract_render_pass(render_layer, "Depth", "Z")
+
+    if normal_pass is not None:
+        normal_pixels = _convert_normal_pixels(list(normal_pass.rect))
+        normal_path = os.path.join(NORMAL_DIR, f"normal_{frame_idx:04d}.png")
+        _save_image(normal_path, normal_pixels, width, height, float_buffer=False, file_format='PNG', colorspace='Non-Color')
+        print(f"  └─ Normal saved: {os.path.basename(normal_path)}")
+    else:
+        print("  ⚠️ Normal pass not available; skipping normal output.")
+
+    if depth_pass is not None:
+        raw_pixels, mask_pixels, min_d, max_d = _convert_depth_pixels(list(depth_pass.rect))
+        depth_exr_path = os.path.join(DEPTH_DIR, f"depth_{frame_idx:04d}.exr")
+        _save_image(depth_exr_path, raw_pixels, width, height, float_buffer=True, file_format='OPEN_EXR', colorspace='Linear')
+        print(f"  └─ Depth saved: {os.path.basename(depth_exr_path)} [range {min_d:.4f} ~ {max_d:.4f}]")
+
+        mask_path = os.path.join(MASK_DIR, f"mask_{frame_idx:04d}.png")
+        _save_image(mask_path, mask_pixels, width, height, float_buffer=False, file_format='PNG', colorspace='Non-Color')
+        print(f"  └─ Depth mask saved: {os.path.basename(mask_path)}")
+    else:
+        print("  ⚠️ Depth/Z pass not available; skipping depth & mask outputs.")
 
 # --- 카메라 내적 파라미터 ---
 fl_x = (cam.lens / cam.sensor_width) * W
@@ -271,9 +284,9 @@ try:
             scene.render.filepath = img_path
             print(f"[Render] {frame_idx+1}/{total_frames}  elev={elev_deg:5.1f}°, azim={math.degrees(azim):6.1f}° → {img_name}")
             bpy.ops.render.render(write_still=True)
-            
-            # 마스크 이미지 렌더링 (render.py의 안티앨리어싱 마스크와 유사한 기능)
-            render_mask_image(frame_idx)
+
+            # 노멀/깊이/마스크 패스 저장
+            save_auxiliary_passes(frame_idx, ACTIVE_VIEW_LAYER_NAME)
 
             # c2w 저장
             c2w = cam_obj.matrix_world.copy()
