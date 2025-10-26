@@ -214,3 +214,68 @@ def recorver_view_position(normalized_view, mask, min_x, max_x, min_y, max_y, mi
     view[..., 2] = torch.where(valid_mask, normalized_view[..., 2] * (max_z - min_z) + min_z, view[..., 2])
 
     return view
+
+
+def recorver_view_position_fast(normalized_view: torch.Tensor,
+                                mask: torch.Tensor,
+                                min_xyz: torch.Tensor,
+                                max_xyz: torch.Tensor,
+                                mask_threshold: float = 0.1) -> torch.Tensor:
+    """
+    고속 버전: 브로드캐스팅과 곱셈으로 분기/인덱싱을 최소화.
+
+    Args:
+        normalized_view: [H, W, 4] 0~1 정규화된 뷰 좌표 (x,y,z,w)
+        mask: [H, W, 1] 마스크 이미지 (float 0~1 권장)
+        min_xyz: [3] 또는 [1, 1, 3] 또는 [H, W, 3] 브로드캐스팅 가능한 텐서
+        max_xyz: [3] 또는 [1, 1, 3] 또는 [H, W, 3] 브로드캐스팅 가능한 텐서
+        mask_threshold: 유효 픽셀 임계값
+
+    Returns:
+        view: [H, W, 4] (x,y,z는 복원, w는 0)
+    """
+    # 마스크를 마지막 채널 유지하며 브로드캐스팅 되게 만듦 [H, W, 1]
+    vm = (mask[..., :1] >= mask_threshold)
+
+    # 스케일/시프트 파라미터 [*, *, 3]
+    scale = (max_xyz - min_xyz)
+
+    # 출력 버퍼 생성 (필요 채널만 계산)
+    view = torch.zeros_like(normalized_view)
+
+    # (x,y,z) 복원 후 마스크 적용. torch.where 대신 곱셈으로 분기 제거
+    restored_xyz = normalized_view[..., :3] * scale + min_xyz
+    view[..., :3] = restored_xyz * vm
+
+    return view
+
+
+def recorver_view_position_batched(normalized_view: torch.Tensor,
+                                   mask: torch.Tensor,
+                                   min_xyz: torch.Tensor,
+                                   max_xyz: torch.Tensor,
+                                   mask_threshold: float = 0.1) -> torch.Tensor:
+    """
+    배치 고속 버전.
+
+    Args:
+        normalized_view: [B, H, W, 4]
+        mask: [B, H, W, 1]
+        min_xyz: [B, 3] 또는 [B, 1, 1, 3]
+        max_xyz: [B, 3] 또는 [B, 1, 1, 3]
+    Returns:
+        [B, H, W, 4]
+    """
+    vm = (mask[..., :1] >= mask_threshold)
+    # 브로드캐스팅을 위해 [B, 1, 1, 3] 형태 보장
+    if min_xyz.dim() == 2:  # [B, 3]
+        min_xyz = min_xyz[:, None, None, :]
+    if max_xyz.dim() == 2:
+        max_xyz = max_xyz[:, None, None, :]
+
+    scale = (max_xyz - min_xyz)
+
+    view = torch.zeros_like(normalized_view)
+    restored_xyz = normalized_view[..., :3] * scale + min_xyz
+    view[..., :3] = restored_xyz * vm
+    return view
