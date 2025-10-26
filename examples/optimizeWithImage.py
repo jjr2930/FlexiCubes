@@ -40,12 +40,12 @@ import json
 def lr_schedule(iter):
     return max(0.0, 10**(-(iter)*0.0002)) # Exponential falloff from [1.0, 0.1] over 5k epochs.    
 
-def time_to_string(seconds):
+def time_to_string(seconds, prefix=''):
     seconds = int(seconds)
     h = (seconds % 86400) // 3600
     m = (seconds % 3600) // 60
     s = seconds % 60
-    return f"{h:02d}:{m:02d}:{s:02d}"
+    return f"{prefix}:{h:02d}:{m:02d}:{s:02d}"
 
 def save_target_images(target, iteration, output_dir):
     """Save target mask and depth images to files"""
@@ -172,6 +172,7 @@ if __name__ == "__main__":
     #  Train loop
     # ==============================================================================================   
     for it in range(FLAGS.iter): 
+        time_to_string(time.time(), prefix=f"Iteration {it}")
         optimizer.zero_grad()
 
         proj = perspective(fovy=np.deg2rad(fov), aspect=res_width/res_height, n=near_clip, f=far_clip, device=device)
@@ -184,6 +185,7 @@ if __name__ == "__main__":
         random_data = random.sample(data, FLAGS.batch)
 
         for item in random_data:
+            time_to_string(time.time(), prefix=f"Processing {item['view_path']}")
             minX = item['view_min_x']
             minY = item['view_min_y']
             minZ = item['view_min_z']
@@ -233,6 +235,8 @@ if __name__ == "__main__":
         mv_stack = torch.stack(mv_batch).to(device)  # [B, 4, 4]
         mvp_stack = torch.stack(mvp_batch).to(device)  # [B, 4, 4]
         
+        time_to_string(time.time(), prefix="Before stacking targets")
+
         # Stack target tensors from list of dicts to dict of tensors
         target_stacked = {
             'mask': torch.stack([t['mask'] for t in target]),  # [B, H, W, 1]
@@ -257,7 +261,9 @@ if __name__ == "__main__":
         reg_loss += L_dev.mean() * 0.5
         reg_loss += (weight[:,:20]).abs().mean() * 0.1
         total_loss = mask_loss + depth_loss + reg_loss
-        
+
+        time_to_string(time.time(), prefix="After computing losses")
+
         # if FLAGS.sdf_loss: # optionally add SDF loss to eliminate internal structures
         #     with torch.no_grad():
         #         pts = sample_random_points(1000, gt_mesh)
