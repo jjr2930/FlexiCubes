@@ -97,16 +97,6 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--batch', type=int, default=8)
     parser.add_argument('-r', '--train_res', nargs=2, type=int, default=[2048, 2048])
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
-    parser.add_argument('--mask_weight', type=float, default=10.0)
-    parser.add_argument('--depth_weight', type=float, default=10.0)
-    parser.add_argument('--downsample_factor', type=int, default=1, help='Compute loss on lower res for stronger gradients (e.g., 4)')
-    # Camera/matrix fixes and global transform
-    parser.add_argument('--mv_fix', type=str, default='none', choices=['none','transpose','inverse','inverse_transpose'], help='Apply fix to Unity model-view matrix')
-    parser.add_argument('--compose_mode', type=str, default='post', choices=['post','pre'], help='Compose model transform with MV: post => MV@M, pre => M@MV')
-    parser.add_argument('--opt_translate', type=bool, default=True, help='Optimize global translation of the model')
-    parser.add_argument('--opt_scale', type=bool, default=False, help='Optimize global uniform scale of the model')
-    parser.add_argument('--opt_rotate', type=bool, default=True, help='Optimize global Euler rotation (rx, ry, rz) of the model')
-    parser.add_argument('--z_flip', type=bool, default=False, help='Apply Z-axis flip in model matrix (handedness fix)')
     parser.add_argument('--voxel_grid_res',nargs=3, type=int, default=[64,64,64])
     
     parser.add_argument('--sdf_loss', type=bool, default=False)  # 이미지 기반 복원에서는 GT 메시가 없으므로 False
@@ -120,6 +110,7 @@ if __name__ == "__main__":
     parser.add_argument('-ri', '--rendering_info', type=str, default=None)
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
     parser.add_argument('-op', '--output_prefix', type=str, default=None)
+
 
 
     FLAGS = parser.parse_args()

@@ -178,30 +178,30 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
         elif type == "depth":
             v_pos_cam = util.xfm_points(mesh.vertices.unsqueeze(0), mv)
             img, _ = util.interpolate(v_pos_cam, rast, mesh.faces.int())
-            # 배치 내 각 이미지를 개별적으로 저장
-            for batch_idx in range(img.shape[0]):
-                depth_img = img[batch_idx].detach().cpu().numpy()
-                #depth_img 의 차원을 출력해봐
-                # print(depth_img.shape)
-                # for width in range(depth_img.shape[1]):
-                #     for height in range(depth_img.shape[0]):
-                #         # depth_img rgba(xyzw)의 에서 xyzw
-                #         x = depth_img[width,height, 0]
-                #         y = depth_img[width,height, 1]
-                #         z = depth_img[width,height, 2]
-                #         w = depth_img[width,height, 3]
-                #         if(x != 0 and y !=0 and z !=0 and w !=0):
-                #             print(f"{width},{height}Depth image XYZW values: {x}, {y}, {z}, {w}")
+            # # 배치 내 각 이미지를 개별적으로 저장
+            # for batch_idx in range(img.shape[0]):
+            #     depth_img = img[batch_idx].detach().cpu().numpy()
+            #     #depth_img 의 차원을 출력해봐
+            #     # print(depth_img.shape)
+            #     # for width in range(depth_img.shape[1]):
+            #     #     for height in range(depth_img.shape[0]):
+            #     #         # depth_img rgba(xyzw)의 에서 xyzw
+            #     #         x = depth_img[width,height, 0]
+            #     #         y = depth_img[width,height, 1]
+            #     #         z = depth_img[width,height, 2]
+            #     #         w = depth_img[width,height, 3]
+            #     #         if(x != 0 and y !=0 and z !=0 and w !=0):
+            #     #             print(f"{width},{height}Depth image XYZW values: {x}, {y}, {z}, {w}")
 
 
-                #그냥 xyzw가 rgba라고 생각하고 저장해봐
-                depth_rgba = np.zeros((depth_img.shape[0], depth_img.shape[1], 4), dtype=np.uint8)
-                depth_rgba[..., 0] = depth_img[..., 0]  # R
-                depth_rgba[..., 1] = depth_img[..., 1]  # G
-                depth_rgba[..., 2] = depth_img[..., 2]  # B
-                depth_rgba[..., 3] = depth_img[..., 3]  # A
+            #     #그냥 xyzw가 rgba라고 생각하고 저장해봐
+            #     depth_rgba = np.zeros((depth_img.shape[0], depth_img.shape[1], 4), dtype=np.uint8)
+            #     depth_rgba[..., 0] = depth_img[..., 0]  # R
+            #     depth_rgba[..., 1] = depth_img[..., 1]  # G
+            #     depth_rgba[..., 2] = depth_img[..., 2]  # B
+            #     depth_rgba[..., 3] = depth_img[..., 3]  # A
 
-                imageio.imwrite(f"depth_image_{batch_idx}.png", depth_rgba)
+            #     imageio.imwrite(f"depth_image_{batch_idx}.png", depth_rgba)
 
         elif type == "normal" :
             normal_indices = (torch.arange(0, mesh.nrm.shape[0], dtype=torch.int64, device='cuda')[:, None]).repeat(1, 3)

@@ -141,3 +141,56 @@ def interpolate(attr, rast, attr_idx, rast_db=None):
     return dr.interpolate(
         attr, rast, attr_idx, rast_db=rast_db,
         diff_attrs=None if rast_db is None else 'all')
+
+
+def ndc_image_to_view_space(ndc_image, depth_image, fovy, resWidth, resHeight, near_clip, far_clip, device=None):
+    """
+    NDC(정규화된 장치 좌표) 깊이 이미지를 뷰 공간 깊이 이미지로 변환.
+    ndc_image: [H, W, r,g,b,a] ndc 공간에서의 3차원 좌표(0~1 범위, -1~1 로 복원해야함)
+    depth_image: [H, W, 1] 깊이 이미지(0~1 범위, NDC depth)=> 
+    fovy: 수직 시야각 (라디안)
+    resWidth: 이미지 너비
+    resHeight: 이미지 높이
+    near_clip: 근접 클리핑 평면
+    far_clip: 원거리 클리핑 평면
+    Returns: 뷰 공간 깊이 이미지 [H, W, x,y,z,w]
+
+    구현순서
+    -. NDC 이미지는 [0,1] 이므로 [-1, 1] 범위로 변환
+    -. depth 이미지도 [0,1] 범위이므로 [-1,1]로 변환
+    -. near clip, far clip 이용해 NDC depth를 뷰 공간 깊이로 복원 복원한 값을 z_view 라고 하자.
+    -. z_view 를 ndc_coords 에 곱하기
+    -. 투영 행렬과 역행렬 계산
+    -. 각 픽셀의 NDC 좌표에 역투영 행렬 적용
+    -. 복원 된 값 반환
+    """
+    if device is None:
+        device = ndc_image.device
+
+    aspect = resWidth / resHeight
+
+    # NDC 좌표를 [-1, 1] 범위로 변환
+    ndc_coords = ndc_image * 2 - 1
+
+    #near clip, far clip 이용해 NDC depth를 뷰 공간 깊이로 복원
+    depth_ndc = depth_image * 2 - 1  # [H, W, 1]
+
+    z_view = (2 * far_clip * near_clip) / (far_clip + near_clip - depth_ndc * (far_clip - near_clip))
+
+    #Z_VIEW를 ndc_image에서 rgba에다가 곱하기
+    ndc_coords *= z_view
+
+    # 투영 행렬과 역행렬
+    perspective_matrix = perspective(fovy, aspect, near_clip, far_clip, device=device)
+    inv_perspective_matrix = torch.inverse(perspective_matrix)
+
+    # 각 픽셀의 NDC 좌표에 역투영 행렬 적용
+    H, W, _ = ndc_coords.shape
+    ndc_coords_flat = ndc_coords.view(-1, 4)  # [H*W, 4]
+    view_space_coords_flat = torch.matmul(
+        torch.nn.functional.pad(ndc_coords_flat[:, :3], pad=(0, 1), mode='constant', value=1.0),
+        inv_perspective_matrix.T
+    )  # [H*W, 4]
+    view_space_coords = view_space_coords_flat.view(H, W, 4)  # [H, W, 4]
+
+    return view_space_coords
