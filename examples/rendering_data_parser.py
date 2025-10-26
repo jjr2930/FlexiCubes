@@ -36,20 +36,29 @@ class CameraItem:
 		return torch.from_numpy(np.array(img)).float() / 255.0
 	
 	def load_depth_image(self, working_directory: str) -> 'torch.Tensor':
-		"""Depth 이미지를 로드해 [H, W, 4] torch.Tensor로 반환 (homogeneous coordinates)."""	
+		"""Depth 이미지를 로드해 [H, W, 1] torch.Tensor로 반환 (Z값만)."""	
 		fullPath = Path(working_directory) / self.depth_path
 		img = Image.open(fullPath).convert("L")
-		depth = torch.from_numpy(np.array(img)).float() / 255.0  # [H, W]
-		# homogeneous coordinates로 변환 [H, W, 4]
-		h, w = depth.shape
-		ones = torch.ones(h, w, 1)
-		depth_4d = torch.cat([
-			torch.zeros(h, w, 1),  # x
-			torch.zeros(h, w, 1),  # y
-			depth.unsqueeze(-1),    # z (depth)
-			ones                    # w
-		], dim=-1)
-		return depth_4d
+		depth = torch.from_numpy(np.array(img)).float() / 255.0  # [H, W], 0~1 범위
+		# Unity depth는 near~far 범위로 정규화되어 있으므로 실제 depth로 변환
+		# 나중에 near_clip, far_clip 정보를 사용해서 실제 값으로 변환할 수 있음
+		return depth.unsqueeze(-1)  # [H, W, 1]
+	
+	def load_depth_image_with_scale(self, working_directory: str, near_clip: float, far_clip: float) -> 'torch.Tensor':
+		"""Depth 이미지를 로드하고 near/far clip을 사용해 실제 카메라 공간 depth로 변환.
+		
+		Args:
+			working_directory: 작업 디렉토리
+			near_clip: Near clipping plane
+			far_clip: Far clipping plane
+			
+		Returns:
+			실제 카메라 공간 depth [H, W, 1]
+		"""
+		depth_normalized = self.load_depth_image(working_directory)  # [H, W, 1], 0~1 범위
+		# Linear depth: depth = near + normalized * (far - near)
+		depth_actual = near_clip + depth_normalized * (far_clip - near_clip)
+		return depth_actual
 
 	def load_mask_image(self, working_directory: str) -> 'torch.Tensor':
 		"""Mask 이미지를 로드해 [H, W, 1] torch.Tensor로 반환."""	
@@ -58,17 +67,29 @@ class CameraItem:
 		mask = torch.from_numpy(np.array(img)).float() / 255.0  # [H, W]
 		return mask.unsqueeze(-1)  # [H, W, 1]
 	
-	def to_pipeline_dict(self, working_directory: str):
-		"""이미지를 로드하고 배치 차원 없이 반환 (나중에 torch.stack으로 쌓음)."""
+	def to_pipeline_dict(self, working_directory: str, near_clip: float = None, far_clip: float = None):
+		"""이미지를 로드하고 배치 차원 없이 반환 (나중에 torch.stack으로 쌓음).
+		
+		Args:
+			working_directory: 작업 디렉토리
+			near_clip: Near clipping plane (depth 스케일링용, None이면 정규화된 값 사용)
+			far_clip: Far clipping plane (depth 스케일링용, None이면 정규화된 값 사용)
+		"""
+		# Depth 로딩: near/far가 제공되면 실제 depth로 변환
+		if near_clip is not None and far_clip is not None:
+			depth_image = self.load_depth_image_with_scale(working_directory, near_clip, far_clip)
+		else:
+			depth_image = self.load_depth_image(working_directory)
+		
 		result = render.render_from_images(
 			self.load_rgb_image(working_directory=working_directory), 
 			self.load_mask_image(working_directory=working_directory), 
-			self.load_depth_image(working_directory=working_directory)
+			depth_image
 		)
 		# render_from_images가 [1, H, W, C] 형태로 반환하므로 배치 차원 제거
 		return {
 			'mask': result['mask'].squeeze(0),   # [H, W, 1]
-			'depth': result['depth'].squeeze(0)  # [H, W, 4]
+			'depth': result['depth'].squeeze(0)  # [H, W, 1]
 		}
 
 

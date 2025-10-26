@@ -199,7 +199,10 @@ if __name__ == "__main__":
         
         # evaluate reconstruction loss
         mask_loss = (buffers['mask'] - target['mask']).abs().mean()
-        depth_loss = (((((buffers['depth'] - (target['depth']))* target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
+        # depth loss: Z값만 비교 (buffers['depth']의 Z는 index 2)
+        buffers_depth_z = buffers['depth'][..., 2:3]  # [B, H, W, 1] - Z component only
+        target_depth_z = target['depth']  # [B, H, W, 1] - already Z only
+        depth_loss = (((((buffers_depth_z - target_depth_z) * target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
     
         t_iter = it / FLAGS.iter
         sdf_weight = FLAGS.sdf_regularizer - (FLAGS.sdf_regularizer - FLAGS.sdf_regularizer/20)*min(1.0, 4.0 * t_iter)
