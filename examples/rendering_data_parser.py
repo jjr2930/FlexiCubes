@@ -30,19 +30,19 @@ class CameraItem:
 
 	def load_rgb_image(self, working_directory: str) -> 'torch.Tensor':
 		"""RGB 이미지를 로드해 [H, W, 3] torch.Tensor로 반환."""	
-		fullPath = Path.joinpath(working_directory, self.rgb_path)
+		fullPath = Path(working_directory) / self.rgb_path
 		img = Image.open(fullPath).convert("RGB")
 		return torch.from_numpy(np.array(img)).float() / 255.0
 	
 	def load_depth_image(self, working_directory: str) -> 'torch.Tensor':
 		"""Depth 이미지를 로드해 [H, W] torch.Tensor로 반환."""	
-		fullPath = Path.joinpath(working_directory, self.depth_path)
+		fullPath = Path(working_directory) / self.depth_path
 		img = Image.open(fullPath).convert("L")
 		return torch.from_numpy(np.array(img)).float() / 255.0
 
 	def load_mask_image(self, working_directory: str) -> 'torch.Tensor':
 		"""Mask 이미지를 로드해 [H, W] torch.Tensor로 반환."""	
-		fullPath = Path.joinpath(working_directory, self.mask_path)
+		fullPath = Path(working_directory) / self.mask_path
 		img = Image.open(fullPath).convert("L")
 		return torch.from_numpy(np.array(img)).float() / 255.0
 	
