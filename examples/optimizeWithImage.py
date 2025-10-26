@@ -203,6 +203,12 @@ if __name__ == "__main__":
             view_img = imageio.v2.imread(view_full_path)  # [H, W, 3 or 4]
             view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
             
+            # Ensure view_img has 4 channels [H, W, 4]
+            if view_img.shape[-1] == 3:
+                # Add alpha channel (all ones)
+                alpha = np.ones((view_img.shape[0], view_img.shape[1], 1), dtype=np.float32)
+                view_img = np.concatenate([view_img, alpha], axis=-1)
+            
             mask_img = imageio.v2.imread(mask_full_path)  # [H, W] or [H, W, 1]
             if len(mask_img.shape) == 2:
                 mask_img = mask_img[:, :, np.newaxis]  # Add channel dimension [H, W, 1]
