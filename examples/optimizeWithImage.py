@@ -24,6 +24,7 @@ import render
 import loss
 import imageio
 from datetime import datetime, timezone, timedelta
+import torch.nn.functional as F
 
 import sys
 sys.path.append('..')
@@ -96,6 +97,9 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--batch', type=int, default=8)
     parser.add_argument('-r', '--train_res', nargs=2, type=int, default=[2048, 2048])
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
+    parser.add_argument('--mask_weight', type=float, default=10.0)
+    parser.add_argument('--depth_weight', type=float, default=10.0)
+    parser.add_argument('--downsample_factor', type=int, default=1, help='Compute loss on lower res for stronger gradients (e.g., 4)')
     parser.add_argument('--voxel_grid_res',nargs=3, type=int, default=[64,64,64])
     
     parser.add_argument('--sdf_loss', type=bool, default=False)  # 이미지 기반 복원에서는 GT 메시가 없으므로 False
@@ -191,6 +195,8 @@ if __name__ == "__main__":
             print(f"DEBUG - mvp shape: {mvp.shape}")
             print(f"DEBUG - target['mask'] shape: {target['mask'].shape}")
             print(f"DEBUG - target['depth'] shape: {target['depth'].shape}")
+            if FLAGS.save_step:
+                save_target_images(target, it, FLAGS.out_dir)
 
         # extract and render FlexiCubes mesh
         voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
@@ -205,12 +211,33 @@ if __name__ == "__main__":
             print(f"DEBUG - buffers['mask'] shape: {buffers['mask'].shape}")
             print(f"DEBUG - buffers['depth'] shape: {buffers['depth'].shape}")
         
+        # 옵션: 손실 계산 해상도 다운샘플링 (그래디언트 강화/가속)
+        def maybe_downsample(t):
+            if FLAGS.downsample_factor <= 1:
+                return t
+            B, H, W, C = t.shape
+            t_nchw = t.permute(0,3,1,2)
+            t_ds = F.interpolate(t_nchw, size=(H//FLAGS.downsample_factor, W//FLAGS.downsample_factor), mode='bilinear', align_corners=False)
+            return t_ds.permute(0,2,3,1)
+
+        pred_mask = maybe_downsample(buffers['mask'])
+        gt_mask   = maybe_downsample(target['mask'])
+        pred_depth_z = maybe_downsample(buffers['depth'][..., 2:3])
+        gt_depth_z   = maybe_downsample(target['depth'])
+
         # evaluate reconstruction loss
-        mask_loss = (buffers['mask'] - target['mask']).abs().mean()
-        # depth loss: Z값만 비교 (buffers['depth']의 Z는 index 2)
-        buffers_depth_z = buffers['depth'][..., 2:3]  # [B, H, W, 1] - Z component only
-        target_depth_z = target['depth']  # [B, H, W, 1] - already Z only
-        depth_loss = (((((buffers_depth_z - target_depth_z) * target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
+        mask_loss = (pred_mask - gt_mask).abs().mean() * FLAGS.mask_weight
+        depth_loss = (((((pred_depth_z - gt_depth_z) * gt_mask)**2).sum(-1)+1e-8)).sqrt().mean() * FLAGS.depth_weight
+
+        # 디버그: 겹침(Overlap) 지표
+        if it % max(1, FLAGS.save_interval) == 0:
+            with torch.no_grad():
+                pm = (pred_mask > 0.5).float()
+                gm = (gt_mask > 0.5).float()
+                inter = (pm*gm).mean().item()
+                u = ((pm+gm).clamp(0,1)).mean().item()
+                iou = inter / (u + 1e-8)
+                print(f"DEBUG IoU(mask) ~ inter:{inter:.4f}, union:{u:.4f}, IoU:{iou:.4f}, pred_mean:{pred_mask.mean().item():.4f}, gt_mean:{gt_mask.mean().item():.4f}")
     
         t_iter = it / FLAGS.iter
         sdf_weight = FLAGS.sdf_regularizer - (FLAGS.sdf_regularizer - FLAGS.sdf_regularizer/20)*min(1.0, 4.0 * t_iter)
