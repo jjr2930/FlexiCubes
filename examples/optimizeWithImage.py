@@ -274,21 +274,6 @@ if __name__ == "__main__":
 
         gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
         
-        #gt_target의 [0]인덱스의 mask를 target_stacked의 mask와 비교하여 시각화
-        gt_first_mask = gt_target['mask'][0]  # [H, W, 1]
-        target_first_mask = target_stacked['mask'][0]  # [H, W, 1]
-        #target_first_mask의 shape를 출력
-        print(f"Target first mask shape: {target_first_mask.shape}")
-
-        # mask 차이 시각화
-        mask_diff = torch.abs(target_first_mask - gt_first_mask)  # [H, W, 1]
-        
-        # 단일 채널을 3채널로 복제하여 RGB 이미지로 만들기
-        mask_diff_image = (mask_diff.detach().cpu().numpy() * 255).astype(np.uint8)
-        mask_diff_image = np.repeat(mask_diff_image, 3, axis=-1)  # [H, W, 1] -> [H, W, 3]
-        
-        imageio.imwrite(os.path.join(FLAGS.out_dir, f'mask_diff_iter_{it:04d}.png'), mask_diff_image)
-
 
         # extract and render FlexiCubes mesh
         voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
@@ -308,6 +293,17 @@ if __name__ == "__main__":
         reg_loss += L_dev.mean() * 0.5
         reg_loss += (weight[:,:20]).abs().mean() * 0.1
         total_loss = mask_loss + depth_loss + reg_loss
+
+
+        mask_loss_with_gt = (buffers['mask'] - gt_target['mask']).abs().mean()
+        depth_loss_with_gt = (((((buffers['depth'] - (gt_target['depth']))* gt_target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
+
+        diff_mask_loss = mask_loss_with_gt - mask_loss
+        diff_depth_loss = depth_loss_with_gt - depth_loss
+
+        # Log the differences
+        print(f"Difference in mask loss: {diff_mask_loss.item()}")
+        print(f"Difference in depth loss: {diff_depth_loss.item()}")
 
         #print(time_to_string(time.time(), prefix="After computing losses"));
 
