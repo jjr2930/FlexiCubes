@@ -302,9 +302,11 @@ if __name__ == "__main__":
         diff_depth_loss = depth_loss_with_gt - depth_loss
 
         # Log the differences
-        print(f"Difference in mask loss: {diff_mask_loss.item()}")
-        print(f"Difference in depth loss: {diff_depth_loss.item()}")
-
+        print(f"============================================")
+        print(f"gt mask loss: {mask_loss_with_gt.item()} vs rendered mask loss: {mask_loss.item()}")
+        print(f"gt depth loss: {depth_loss_with_gt.item()} vs rendered depth loss: {depth_loss.item()}")
+        print(f"diff  in mask loss: {diff_mask_loss.item()}, diff in depth loss: {diff_depth_loss.item()}")
+        print(f"============================================")
         #print(time_to_string(time.time(), prefix="After computing losses"));
 
         # if FLAGS.sdf_loss: # optionally add SDF loss to eliminate internal structures
