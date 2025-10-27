@@ -156,8 +156,9 @@ if __name__ == "__main__":
             # print(f"    Z: [{valid_view_norm[:, 2].min():.4f}, {valid_view_norm[:, 2].max():.4f}]")
 
             # 파일 저장 (RGB 채널만 사용)
-            view_path = os.path.join(FLAGS.out_dir, f"view_{i*j:04d}.png")
-            mask_path = os.path.join(FLAGS.out_dir, f"mask_{i*j:04d}.png")
+            index = i * elevation_steps + j
+            view_path = os.path.join(FLAGS.out_dir, f"view_{index:04d}.png")
+            mask_path = os.path.join(FLAGS.out_dir, f"mask_{index:04d}.png")
 
             view_image_dict[f"{view_path}"] = view_norm
             mask_image_dict[f"{mask_path}"] = mask
