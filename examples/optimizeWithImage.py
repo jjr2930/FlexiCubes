@@ -233,10 +233,11 @@ if __name__ == "__main__":
         selected_data = []
 
         #batch 갯수만큼 data에서 환형으로 선택
-        for b in range(FLAGS.batch):
-            selected_data.append(data[data_index])
-            data_index = (data_index + 1) % len(data)
+        # for b in range(FLAGS.batch):
+        #     selected_data.append(data[data_index])
+        #     data_index = (data_index + 1) % len(data)
 
+        selected_data = random.sample(data, FLAGS.batch)
         for item in selected_data:
             #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
             minX = item['view_min_x']
