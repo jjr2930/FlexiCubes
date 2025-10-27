@@ -287,25 +287,16 @@ if __name__ == "__main__":
 
         gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
         
-        #gt_target의 [0]인덱스의 depth를 target_stacked의 depth 와 비교하여 시각화
-        gt_first_mask = gt_target['mask'][0]  # [H, W, 4]
-        target_first_mask = target_stacked['mask'][0]  # [H, W, 4]
+        #gt_target의 [0]인덱스의 mask를 target_stacked의 mask와 비교하여 시각화
+        gt_first_mask = gt_target['mask'][0]  # [H, W, 1]
+        target_first_mask = target_stacked['mask'][0]  # [H, W, 1]
     
-        #target_first_depth와 gt_first_depth의 차이를 시각화
-        mask_diff = torch.abs(target_first_mask - gt_first_mask)  # [H, W, 4]
-        #depth_diff 정규화
-        mask_min_x = mask_diff[:, 0].min()
-        mask_max_x = mask_diff[:, 0].max()
-        mask_min_y = mask_diff[:, 1].min()
-        mask_max_y = mask_diff[:, 1].max()
-        mask_min_z = mask_diff[:, 2].min()
-        mask_max_z = mask_diff[:, 2].max()
-
-        mask_diff[:, 0] = (mask_diff[:, 0] - mask_min_x) / (mask_max_x - mask_min_x + 1e-8)
-        mask_diff[:, 1] = (mask_diff[:, 1] - mask_min_y) / (mask_max_y - mask_min_y + 1e-8)
-        mask_diff[:, 2] = (mask_diff[:, 2] - mask_min_z) / (mask_max_z - mask_min_z + 1e-8)
-
-        mask_diff_image = (mask_diff[:, :3].detach().cpu().numpy() * 255).astype(np.uint8)    
+        # mask 차이 시각화
+        mask_diff = torch.abs(target_first_mask - gt_first_mask)  # [H, W, 1]
+        
+        # 단일 채널을 3채널로 복제하여 RGB 이미지로 만들기
+        mask_diff_image = (mask_diff.detach().cpu().numpy() * 255).astype(np.uint8)
+        mask_diff_image = np.repeat(mask_diff_image, 3, axis=-1)  # [H, W, 1] -> [H, W, 3]
         
         imageio.imwrite(os.path.join(FLAGS.out_dir, f'mask_diff_iter_{it:04d}.png'), mask_diff_image)
 
