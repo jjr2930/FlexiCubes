@@ -112,6 +112,7 @@ if __name__ == "__main__":
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
     parser.add_argument('-op', '--output_prefix', type=str, default=None)
     parser.add_argument('-df', '--dataset_file', type=str, default=None)
+    parser.add_argument('-pl', '--print_loss', type=bool, default=False)
 
     FLAGS = parser.parse_args()
     device = 'cuda'
@@ -287,11 +288,12 @@ if __name__ == "__main__":
         diff_depth_loss = depth_loss_with_gt - depth_loss
 
         # Log the differences
-        print(f"============================================")
-        print(f"gt mask loss: {mask_loss_with_gt.item()} vs rendered mask loss: {mask_loss.item()}")
-        print(f"gt depth loss: {depth_loss_with_gt.item()} vs rendered depth loss: {depth_loss.item()}")
-        print(f"diff  in mask loss: {diff_mask_loss.item()}, diff in depth loss: {diff_depth_loss.item()}")
-        print(f"============================================")
+        if(FLAGS.print_loss):
+            print(f"============================================")
+            print(f"gt mask loss: {mask_loss_with_gt.item()} vs rendered mask loss: {mask_loss.item()}")
+            print(f"gt depth loss: {depth_loss_with_gt.item()} vs rendered depth loss: {depth_loss.item()}")
+            print(f"diff  in mask loss: {diff_mask_loss.item()}, diff in depth loss: {diff_depth_loss.item()}")
+            print(f"============================================")
         #print(time_to_string(time.time(), prefix="After computing losses"));
 
         # if FLAGS.sdf_loss: # optionally add SDF loss to eliminate internal structures
