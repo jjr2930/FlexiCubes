@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('-fov', '--fovy', type=float, default=45.0)
     parser.add_argument('-cn', '--cam_near', type=float, default=0.1)
     parser.add_argument('-cf', '--cam_far', type=float, default=100.0)
-    parser.add_argument('-fv', '--focus_observe_vertex', nargs=3, type=int, default=[0,1,2])
+    parser.add_argument('-fv', '--focus_observe_vertex', nargs=2, type=int, default=[0,1,2])
     parser.add_argument('-fr', '--focus_observe_radius', nargs=2, type=float, default=[2.0,4.0])
     parser.add_argument('-fs', '--focus_observe_count', type=int, default=30)
     
