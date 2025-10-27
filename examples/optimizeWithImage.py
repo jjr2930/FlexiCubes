@@ -204,6 +204,7 @@ if __name__ == "__main__":
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
+    data_index = 0;
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
 
@@ -212,11 +213,14 @@ if __name__ == "__main__":
         mvp_batch = []
         # mvp will be recomputed after mv fix and model composition
         target = []
+        selected_data = []
 
-        #batch 갯수만큼 data에서 랜덤으로 선택
-        random_data = random.sample(data, FLAGS.batch)
+        #batch 갯수만큼 data에서 환형으로 선택
+        for b in range(FLAGS.batch):
+            selected_data.append(data[data_index])
+            data_index = (data_index + 1) % len(data)
 
-        for item in random_data:
+        for item in selected_data:
             #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
             minX = item['view_min_x']
             minY = item['view_min_y']
