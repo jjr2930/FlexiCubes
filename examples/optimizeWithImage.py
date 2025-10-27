@@ -258,9 +258,7 @@ if __name__ == "__main__":
             'depth': torch.stack([t['depth'] for t in target])  # [B, H, W, 4]
         }
 
-        gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
-        
-
+       
         # extract and render FlexiCubes mesh
         voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
         grid_verts = x_nx3 + (2-1e-8) / (voxel_res * 2) * torch.tanh(deform)
@@ -280,15 +278,17 @@ if __name__ == "__main__":
         reg_loss += (weight[:,:20]).abs().mean() * 0.1
         total_loss = mask_loss + depth_loss + reg_loss
 
-
-        mask_loss_with_gt = (buffers['mask'] - gt_target['mask']).abs().mean()
-        depth_loss_with_gt = (((((buffers['depth'] - (gt_target['depth']))* gt_target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
-
-        diff_mask_loss = mask_loss_with_gt - mask_loss
-        diff_depth_loss = depth_loss_with_gt - depth_loss
-
+        
         # Log the differences
         if(FLAGS.print_loss == True):
+            gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
+        
+            mask_loss_with_gt = (buffers['mask'] - gt_target['mask']).abs().mean()
+            depth_loss_with_gt = (((((buffers['depth'] - (gt_target['depth']))* gt_target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
+
+            diff_mask_loss = mask_loss_with_gt - mask_loss
+            diff_depth_loss = depth_loss_with_gt - depth_loss
+
             print(f"============================================")
             print(f"gt mask loss: {mask_loss_with_gt.item()} vs rendered mask loss: {mask_loss.item()}")
             print(f"gt depth loss: {depth_loss_with_gt.item()} vs rendered depth loss: {depth_loss.item()}")
