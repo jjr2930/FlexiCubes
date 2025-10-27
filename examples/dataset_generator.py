@@ -79,7 +79,9 @@ if __name__ == "__main__":
             # 한 장씩 렌더링하여 메모리 절약
             random_radius = random.uniform(radius[0], radius[1])
 
-            mv, mvp = render.orbit(0, azimuth=np.deg2rad(azimuth), radius=radius, 
+            mv, mvp = render.orbit(elevation=np.deg2rad(elevation), 
+                                azimuth=np.deg2rad(azimuth), 
+                                radius=random_radius, 
                                 lookPosition=lookPosition, 
                                 fovy=np.deg2rad(fovy), 
                                 iter_res=render_resolution, 
