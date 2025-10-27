@@ -125,6 +125,7 @@ if __name__ == "__main__":
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
     parser.add_argument('-op', '--output_prefix', type=str, default=None)
     parser.add_argument('-df', '--dataset_file', type=str, default=None)
+    parser.add_argument('-fuf', '--focus_using_flag', nargs=3, type=bool, default=[True, True, True])
 
     # Use robust boolean parsing so both "--print_loss" and "--print_loss false" work as expected
     # parser.add_argument('-pl', '--print_loss', type=str2bool, nargs='?', const=True, default=False,
@@ -146,6 +147,7 @@ if __name__ == "__main__":
     res_height = json_doc['res_height']
     data = json_doc['data']
     focus_data = [json_doc['focus_data_0'], json_doc['focus_data_1'], json_doc['focus_data_2']]
+    focus_using_flag = FLAGS.focus_using_flag
 
     # 이미지를 미리 로드하지 않고, 필요할 때마다 로드하는 함수 정의
     def load_and_process_image(item):
@@ -233,15 +235,16 @@ if __name__ == "__main__":
         selected_data = random.sample(data, FLAGS.batch - (FLAGS.focus_count * 3))
         
         #집중 관찰 뷰
-        focus_sample_1 = random.sample(focus_data[0], FLAGS.focus_count)
-        focus_sample_2 = random.sample(focus_data[1], FLAGS.focus_count)
-        focus_sample_3 = random.sample(focus_data[2], FLAGS.focus_count)
+        if focus_using_flag[0]:
+            focus_sample_0 = random.sample(focus_data[0], FLAGS.focus_count)
+            selected_data.extend(focus_sample_0)
+        if focus_using_flag[1]:
+            focus_sample_1 = random.sample(focus_data[1], FLAGS.focus_count)
+            selected_data.extend(focus_sample_1)
+        if focus_using_flag[2]:
+            focus_sample_2 = random.sample(focus_data[2], FLAGS.focus_count)
+            selected_data.extend(focus_sample_2)
         
-        # 선택된 focus_data 항목들을 selected_data에 추가
-        selected_data.extend(focus_sample_1)
-        selected_data.extend(focus_sample_2)
-        selected_data.extend(focus_sample_3)
-
         for item in selected_data:
             #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
             read_mv = item['mv']
