@@ -37,6 +37,7 @@ if __name__ == "__main__":
     parser.add_argument('-cf', '--cam_far', type=float, default=100.0)
     FLAGS = parser.parse_args()
 
+    start_time = time.time()
     os.makedirs(FLAGS.out_dir, exist_ok=True)
     
     device = 'cuda'
@@ -206,4 +207,6 @@ if __name__ == "__main__":
     with open(dataset_json_path, 'w') as f:
         json.dump(dataset, f, indent=4)
 
-    print(f"Dataset JSON saved to {dataset_json_path}")
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    print(f"Dataset JSON saved to {dataset_json_path}, elapsed time: {elapsed_time:.2f} seconds")
