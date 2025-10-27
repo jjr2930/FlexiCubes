@@ -155,21 +155,19 @@ if __name__ == "__main__":
                                                         iter_res=render_resolution,
                                                         position=vertex_coord.cpu().numpy(), device=device)
 
-        # 배치 차원 추가 (render_mesh_paper는 배치를 기대함)
-        mv_batch = mv.unsqueeze(0)
-        mvp_batch = mvp.unsqueeze(0)
-
+        # get_random_camera_batch_custom은 이미 배치 형태 [focus_observe_count, 4, 4]로 반환하므로 unsqueeze 불필요
         # 렌더링
-        rendered = render.render_mesh_paper(gt_mesh, mv_batch, mvp_batch, render_resolution)
+        rendered = render.render_mesh_paper(gt_mesh, mv, mvp, render_resolution)
         
-        view = rendered['depth'][0].cpu().numpy()  # [H, W, 4]
-        mask = rendered['mask'][0].cpu().numpy()    # [H, W, 1]
+        # rendered['depth']와 rendered['mask']는 배치 형태 [focus_observe_count, H, W, C]
+        views = rendered['depth'].cpu().numpy()  # [B, H, W, 4]
+        masks = rendered['mask'].cpu().numpy()   # [B, H, W, 1]
         
         # 메모리 정리
         del rendered
         torch.cuda.empty_cache()
 
-        # 파일 저장 focus_obsuve_count 만큼 하나로 들어가있다 나누어서 저장
+        # 파일 저장 focus_observe_count 만큼 배치로 렌더링된 결과를 하나씩 저장
         for k in range(focus_observe_count):
             index = k * focus_observe_count + i
 
@@ -177,18 +175,18 @@ if __name__ == "__main__":
             mask_path = os.path.join(FLAGS.out_dir, f"mask_fc{index:04d}.png")
 
             # view는 NumPy 바이너리로 저장 (원본 float32 값 그대로, 정밀도 손실 없음)
-            np.save(view_path, view)
+            np.save(view_path, views[k])  # k번째 배치 아이템 저장
             # mask는 PNG로 저장 (단순 0/1 값이므로 PNG로 충분)
-            imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
+            imageio.imwrite(mask_path, (masks[k, ..., 0] * 255).astype(np.uint8))  # k번째 배치 아이템 저장
         
             # 데이터셋 항목 추가
             dataset_item = dict()
             dataset_item["view_path"] = os.path.basename(view_path)
             dataset_item["mask_path"] = os.path.basename(mask_path)
-            # mv 행렬 저장
+            # mv 행렬 저장 (k번째 배치 아이템)
             dataset_item["mv"] = mv[k].cpu().numpy().tolist()
             dataset["data"].append(dataset_item)  
-            
+
     print("Focus observe views generated.")  
 
     #데이터셋 json 저장
