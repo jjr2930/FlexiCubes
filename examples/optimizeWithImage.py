@@ -132,7 +132,6 @@ if __name__ == "__main__":
     loaded_mask_images = dict()
 
     for item in data:
-
         view_full_path = os.path.join(FLAGS.working_directory, item['view_path'])
         mask_full_path = os.path.join(FLAGS.working_directory, item['mask_path'])
 
@@ -215,9 +214,6 @@ if __name__ == "__main__":
             mv = torch.tensor(read_mv, dtype=torch.float32, device=device)
             mvp = proj @ mv
 
-            print(f"Mask loading time: {sub_start_end - sub_start_time:.4f} seconds")
-
-            sub_start_time = time.time()
             # Convert to torch tensors for recorver_view_position function
             view_img_torch = torch.from_numpy(view_img[item['view_path']]).float().to(device)
             mask_img_torch = torch.from_numpy(mask_img[item['mask_path']]).float().to(device)
@@ -225,8 +221,6 @@ if __name__ == "__main__":
             view = recorver_view_position(view_img_torch, mask_img_torch,
                                           min_x=minX, min_y=minY, min_z=minZ,
                                           max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
-            sub_start_end = time.time()
-            print(f"View position recovery time: {sub_start_end - sub_start_time:.4f} seconds")
 
             mv_batch.append(mv)
             mvp_batch.append(mvp)
