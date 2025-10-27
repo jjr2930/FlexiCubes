@@ -125,7 +125,7 @@ if __name__ == "__main__":
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
     parser.add_argument('-op', '--output_prefix', type=str, default=None)
     parser.add_argument('-df', '--dataset_file', type=str, default=None)
-    parser.add_argument('-fuf', '--focus_using_flag', nargs=3, type=bool, default=[True, True, True])
+    parser.add_argument('-fuf', '--focus_using_flag', nargs=2, type=bool, default=[True, True])
     parser.add_argument('-fm', '--focus_mode', type=str, default='middle')  # 'middle' or 'post'
     parser.add_argument('-fpi', '--focus_post_index', type=int, default=0)
 
@@ -248,9 +248,7 @@ if __name__ == "__main__":
             if focus_using_flag[1]:
                 focus_sample_1 = random.sample(focus_data[1], FLAGS.focus_count)
                 selected_data.extend(focus_sample_1)
-            if focus_using_flag[2]:
-                focus_sample_2 = random.sample(focus_data[2], FLAGS.focus_count)
-                selected_data.extend(focus_sample_2)
+                
         elif focus_mode == 'post':
             if it < focus_post_index:
                 #batch count - focus_count 만큼 data에서 랜덤 선택
@@ -262,9 +260,6 @@ if __name__ == "__main__":
                 if focus_using_flag[1]:
                     focus_sample_1 = random.sample(focus_data[1], FLAGS.focus_count)
                     selected_data.extend(focus_sample_1)
-                if focus_using_flag[2]:
-                    focus_sample_2 = random.sample(focus_data[2], FLAGS.focus_count)
-                    selected_data.extend(focus_sample_2)
         
         for item in selected_data:
             #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
