@@ -33,6 +33,19 @@ import random
 
 import json
 
+# Robust boolean parser for argparse (supports: true/false, yes/no, 1/0, and flag-only)
+def str2bool(v):
+    if isinstance(v, bool):
+        return v
+    if v is None:
+        return False
+    val = str(v).lower()
+    if val in ('yes', 'true', 't', 'y', '1'):
+        return True
+    if val in ('no', 'false', 'f', 'n', '0'):
+        return False
+    raise argparse.ArgumentTypeError('Boolean value expected (true/false).')
+
 ###############################################################################
 # Functions adapted from https://github.com/NVlabs/nvdiffrec
 ###############################################################################
@@ -112,7 +125,9 @@ if __name__ == "__main__":
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
     parser.add_argument('-op', '--output_prefix', type=str, default=None)
     parser.add_argument('-df', '--dataset_file', type=str, default=None)
-    parser.add_argument('-pl', '--print_loss', type=bool, default=False)
+    # Use robust boolean parsing so both "--print_loss" and "--print_loss false" work as expected
+    # parser.add_argument('-pl', '--print_loss', type=str2bool, nargs='?', const=True, default=False,
+    #                     help='Print GT vs rendered losses (use --print_loss or --print_loss true to enable)')
 
     FLAGS = parser.parse_args()
     device = 'cuda'
@@ -138,20 +153,12 @@ if __name__ == "__main__":
         view_full_path = os.path.join(FLAGS.working_directory, item['view_path'])
         mask_full_path = os.path.join(FLAGS.working_directory, item['mask_path'])
 
-        # view는 NumPy 바이너리 파일로 로드 (.npy)
-        view_img = np.load(view_full_path)  # 이미 float32 형식으로 정규화된 데이터
+        # view는 NumPy 바이너리 파일로 로드 (.npy) - 렌더러의 원본 [H, W, 4] 값을 그대로 사용
+        view_img = np.load(view_full_path)
         # mask는 PNG 파일로 로드
         mask_img = imageio.imread(mask_full_path)
         mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
-        
-        # view 이미지를 RGBA 4채널로 변환, 알파 채널을 1로 고정
-        if view_img.ndim == 3 and view_img.shape[-1] == 3:
-            # RGB 3채널인 경우 알파 채널 추가
-            alpha = np.ones((*view_img.shape[:2], 1), dtype=np.float32)
-            view_img = np.concatenate([view_img, alpha], axis=-1)
-        elif view_img.ndim == 3 and view_img.shape[-1] == 4:
-            # 이미 RGBA인 경우 알파 채널을 1로 고정
-            view_img[..., 3] = 1.0
+        # view는 좌표/깊이용 4채널 텐서이므로 어떠한 채널 수정도 하지 않는다 (W 채널 보존)
         
         # 마스크를 단일 채널로 변환 [H, W, 1]
         if mask_img.ndim == 3:
@@ -280,20 +287,20 @@ if __name__ == "__main__":
 
         
         # Log the differences
-        if(FLAGS.print_loss == True):
-            gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
+        # if(FLAGS.print_loss == True):
+        #     gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
         
-            mask_loss_with_gt = (buffers['mask'] - gt_target['mask']).abs().mean()
-            depth_loss_with_gt = (((((buffers['depth'] - (gt_target['depth']))* gt_target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
+        #     mask_loss_with_gt = (buffers['mask'] - gt_target['mask']).abs().mean()
+        #     depth_loss_with_gt = (((((buffers['depth'] - (gt_target['depth']))* gt_target['mask'])**2).sum(-1)+1e-8)).sqrt().mean() * 10
 
-            diff_mask_loss = mask_loss_with_gt - mask_loss
-            diff_depth_loss = depth_loss_with_gt - depth_loss
+        #     diff_mask_loss = mask_loss_with_gt - mask_loss
+        #     diff_depth_loss = depth_loss_with_gt - depth_loss
 
-            print(f"============================================")
-            print(f"gt mask loss: {mask_loss_with_gt.item()} vs rendered mask loss: {mask_loss.item()}")
-            print(f"gt depth loss: {depth_loss_with_gt.item()} vs rendered depth loss: {depth_loss.item()}")
-            print(f"diff  in mask loss: {diff_mask_loss.item()}, diff in depth loss: {diff_depth_loss.item()}")
-            print(f"============================================")
+        #     print(f"============================================")
+        #     print(f"gt mask loss: {mask_loss_with_gt.item()} vs rendered mask loss: {mask_loss.item()}")
+        #     print(f"gt depth loss: {depth_loss_with_gt.item()} vs rendered depth loss: {depth_loss.item()}")
+        #     print(f"diff  in mask loss: {diff_mask_loss.item()}, diff in depth loss: {diff_depth_loss.item()}")
+        #     print(f"============================================")
         #print(time_to_string(time.time(), prefix="After computing losses"));
 
         # if FLAGS.sdf_loss: # optionally add SDF loss to eliminate internal structures
