@@ -91,8 +91,8 @@ if __name__ == "__main__":
     print(f"Generating {azimuth_steps} views...")
     
 
-    for i in range(azimuth_steps):
-        azimuth = i * azimuth_delta
+    for j in range(azimuth_steps):
+        azimuth = j * azimuth_delta
         for i in range(elevation_steps):
             elevation = elevation_limit[0] + i * elevation_delta  # -80도에서 +80도까지
 
@@ -123,7 +123,7 @@ if __name__ == "__main__":
             torch.cuda.empty_cache()
 
             # 파일 저장
-            index = i * elevation_steps + i
+            index = j * elevation_steps + i
             view_path = os.path.join(FLAGS.out_dir, f"view_{index:03d}.npy")
             mask_path = os.path.join(FLAGS.out_dir, f"mask_{index:03d}.png")
 
