@@ -214,6 +214,7 @@ if __name__ == "__main__":
             sub_start_time = time.time()
             # Ensure view_img has 4 channels [H, W, 4]
             if view_img.shape[-1] == 3:
+                print("view_img shape[-1] = 3")
                 # Add alpha channel (all ones)
                 alpha = np.ones((view_img.shape[0], view_img.shape[1], 1), dtype=np.float32)
                 view_img = np.concatenate([view_img, alpha], axis=-1)
@@ -236,7 +237,7 @@ if __name__ == "__main__":
                                           max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
             sub_start_end = time.time()
             print(f"View position recovery time: {sub_start_end - sub_start_time:.4f} seconds")
-            
+
             mv_batch.append(mv)
             mvp_batch.append(mvp)
             target.append({
