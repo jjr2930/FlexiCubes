@@ -215,8 +215,8 @@ if __name__ == "__main__":
             mvp = proj @ mv
 
             # Convert to torch tensors for recorver_view_position function
-            view_img_torch = torch.from_numpy(view_img[item['view_path']]).float().to(device)
-            mask_img_torch = torch.from_numpy(mask_img[item['mask_path']]).float().to(device)
+            view_img_torch = torch.from_numpy(loaded_view_images[item['view_path']]).float().to(device)
+            mask_img_torch = torch.from_numpy(loaded_mask_images[item['mask_path']]).float().to(device)
 
             view = recorver_view_position(view_img_torch, mask_img_torch,
                                           min_x=minX, min_y=minY, min_z=minZ,
