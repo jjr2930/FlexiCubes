@@ -30,6 +30,7 @@ if __name__ == "__main__":
     parser.add_argument('-rm', '--ref_mesh', type=str)    
     parser.add_argument('-as', '--azimuth_step', type=int, default=10)
     parser.add_argument('-es', '--elevation_step', type=int, default=10)
+    parser.add_argument('-el', '--elevation_limit', nargs=2, type=float, default=[-80, 80])
     parser.add_argument('-rd', '--radius', nargs=2, type=float, default=[2.0, 4.0])
     parser.add_argument('-rr', '--rendering_resolution', nargs=2, type=int, default=[2048,2048])
     parser.add_argument('-lp', '--look_position', nargs=3, type=float, default=[0.0, 0.0, 0.0])
@@ -53,6 +54,7 @@ if __name__ == "__main__":
     cam_near = FLAGS.cam_near
     cam_far = FLAGS.cam_far
     radius = FLAGS.radius
+    elevation_limit = FLAGS.elevation_limit
 
     # 데이터셋 정보 초기화
     dataset = dict()
@@ -66,17 +68,18 @@ if __name__ == "__main__":
     azimuth_delta = 360.0 / FLAGS.azimuth_step
     azimuth_steps = int(360.0 / azimuth_delta)
 
-    elevation_delta = 160.0 / FLAGS.elevation_step
-    elevation_steps = int(160.0 / elevation_delta)
-    
+    elevation_range = abs(elevation_limit[0]) + abs(elevation_limit[1])
+    elevation_delta = elevation_range / FLAGS.elevation_step
+    elevation_steps = int(elevation_range / elevation_delta)
+
     print(f"Generating {azimuth_steps} views...")
     
 
     for i in range(azimuth_steps):
         azimuth = i * azimuth_delta
         for j in range(elevation_steps):
-            elevation = -80 + j * elevation_delta  # -80도에서 +80도까지
-            
+            elevation = elevation_limit[0] + j * elevation_delta  # -80도에서 +80도까지
+
             # 한 장씩 렌더링하여 메모리 절약
             random_radius = random.uniform(radius[0], radius[1])
 
