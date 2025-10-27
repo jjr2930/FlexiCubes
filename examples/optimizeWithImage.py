@@ -25,6 +25,8 @@ import loss
 import imageio.v2 as imageio
 from datetime import datetime, timezone, timedelta
 import torch.nn.functional as F
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 import sys
 sys.path.append('..')
@@ -132,7 +134,8 @@ if __name__ == "__main__":
     loaded_view_images = dict()
     loaded_mask_images = dict()
 
-    for item in data:
+    def load_single_image(item):
+        """단일 이미지 로딩 함수 (멀티스레드에서 실행)"""
         view_full_path = os.path.join(FLAGS.working_directory, item['view_path'])
         mask_full_path = os.path.join(FLAGS.working_directory, item['mask_path'])
 
@@ -159,8 +162,21 @@ if __name__ == "__main__":
             # 그레이스케일 [H, W]인 경우 채널 차원 추가
             mask_img = mask_img[..., np.newaxis]
 
-        loaded_view_images[item['view_path']] = view_img
-        loaded_mask_images[item['mask_path']] = mask_img
+        return item['view_path'], item['mask_path'], view_img, mask_img
+
+    # 멀티스레드로 이미지 로딩
+    start_time = time.time()
+    print(f"{start_time} Loading {len(data)} images using multithreading...")
+    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+        results = list(executor.map(load_single_image, data))
+    
+    # 결과를 딕셔너리에 저장
+    for view_path, mask_path, view_img, mask_img in results:
+        loaded_view_images[view_path] = view_img
+        loaded_mask_images[mask_path] = mask_img
+
+    end_time = time.time()
+    print(f"Loaded {len(loaded_view_images)} images successfully in {end_time - start_time:.2f} seconds.")
 
     os.makedirs(FLAGS.out_dir, exist_ok=True)
     glctx = dr.RasterizeGLContext()
