@@ -290,7 +290,9 @@ if __name__ == "__main__":
         #gt_target의 [0]인덱스의 mask를 target_stacked의 mask와 비교하여 시각화
         gt_first_mask = gt_target['mask'][0]  # [H, W, 1]
         target_first_mask = target_stacked['mask'][0]  # [H, W, 1]
-    
+        #target_first_mask의 shape를 출력
+        print(f"Target first mask shape: {target_first_mask.shape}")
+
         # mask 차이 시각화
         mask_diff = torch.abs(target_first_mask - gt_first_mask)  # [H, W, 1]
         
