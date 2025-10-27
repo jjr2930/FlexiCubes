@@ -70,6 +70,8 @@ if __name__ == "__main__":
     
     print(f"Generating {azimuth_steps} views...")
     
+    view_image_dict = dict()
+    mask_image_dict = dict()
 
     for i in range(azimuth_steps):
         azimuth = i * azimuth_delta
@@ -156,8 +158,8 @@ if __name__ == "__main__":
             view_path = os.path.join(FLAGS.out_dir, f"view_{i:03d}.png")
             mask_path = os.path.join(FLAGS.out_dir, f"mask_{i:03d}.png")
 
-            imageio.imwrite(view_path, (view_norm[:, :, :3] * 255).astype(np.uint8))
-            imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
+            view_image_dict[f"{view_path}"] = view_norm
+            mask_image_dict[f"{mask_path}"] = mask
             
             # 데이터셋 항목 추가
             dataset_item = dict()
@@ -178,6 +180,27 @@ if __name__ == "__main__":
     
     #데이터셋 json 저장
     dataset_json_path = os.path.join(FLAGS.out_dir, "dataset.json")
+
+    # imageio.imwrite(view_path, (view_norm[:, :, :3] * 255).astype(np.uint8))
+    # imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
+
+    #멀티스레드르 이용해서 저장한다.
+    import concurrent.futures
+    def save_image(path, image, is_mask=False):
+        if is_mask:
+            imageio.imwrite(path, (image[..., 0] * 255).astype(np.uint8))
+        else:
+            imageio.imwrite(path, (image[:, :, :3] * 255).astype(np.uint8))
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+        for path, image in view_image_dict.items():
+            futures.append(executor.submit(save_image, path, image, is_mask=False))
+        for path, image in mask_image_dict.items():
+            futures.append(executor.submit(save_image, path, image, is_mask=True))
+        #모든 작업이 완료될 때까지 대기
+        concurrent.futures.wait(futures)
+
 
     #json으로 저장
     with open(dataset_json_path, 'w') as f:
