@@ -76,6 +76,10 @@ if __name__ == "__main__":
     dataset["res_width"] = render_resolution[0]
     dataset["res_height"] = render_resolution[1]
     dataset["data"] = []
+    dataset["focus_data_0"] = []
+    dataset["focus_data_1"] = []
+    dataset["focus_data_2"] = []
+
 
     azimuth_delta = 360.0 / FLAGS.azimuth_step
     azimuth_steps = int(360.0 / azimuth_delta)
@@ -185,7 +189,7 @@ if __name__ == "__main__":
             dataset_item["mask_path"] = os.path.basename(mask_path)
             # mv 행렬 저장 (k번째 배치 아이템)
             dataset_item["mv"] = mv[k].cpu().numpy().tolist()
-            dataset["focus_data"].append(dataset_item)
+            dataset[f"focus_data_{i}"].append(dataset_item)
 
 
     print("Focus observe views generated.")  
