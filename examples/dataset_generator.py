@@ -159,29 +159,32 @@ if __name__ == "__main__":
                                                         iter_res=render_resolution,
                                                         position=vertex_coord.cpu().numpy(), device=device)
 
-        # get_random_camera_batch_custom은 이미 배치 형태 [focus_observe_count, 4, 4]로 반환하므로 unsqueeze 불필요
-        # 렌더링
-        rendered = render.render_mesh_paper(gt_mesh, mv, mvp, render_resolution)
-        
-        # rendered['depth']와 rendered['mask']는 배치 형태 [focus_observe_count, H, W, C]
-        views = rendered['depth'].cpu().numpy()  # [B, H, W, 4]
-        masks = rendered['mask'].cpu().numpy()   # [B, H, W, 1]
-        
-        # 메모리 정리
-        del rendered
-        torch.cuda.empty_cache()
-
-        # 파일 저장 focus_observe_count 만큼 배치로 렌더링된 결과를 하나씩 저장
+        # get_random_camera_batch_custom은 이미 배치 형태 [focus_observe_count, 4, 4]로 반환
+        # 메모리 이슈를 방지하기 위해 한 장씩 렌더링
         for k in range(focus_observe_count):
+            # 한 장씩 렌더링
+            mv_single = mv[k:k+1]  # [1, 4, 4]
+            mvp_single = mvp[k:k+1]  # [1, 4, 4]
+            
+            rendered = render.render_mesh_paper(gt_mesh, mv_single, mvp_single, render_resolution)
+            
+            view = rendered['depth'][0].cpu().numpy()  # [H, W, 4]
+            mask = rendered['mask'][0].cpu().numpy()   # [H, W, 1]
+            
+            # 메모리 정리
+            del rendered
+            torch.cuda.empty_cache()
+
+            # 파일 저장
             index = k * focus_observe_count + i
 
             view_path = os.path.join(FLAGS.out_dir, f"view_fc{index:04d}.npy")
             mask_path = os.path.join(FLAGS.out_dir, f"mask_fc{index:04d}.png")
 
             # view는 NumPy 바이너리로 저장 (원본 float32 값 그대로, 정밀도 손실 없음)
-            np.save(view_path, views[k])  # k번째 배치 아이템 저장
+            np.save(view_path, view)
             # mask는 PNG로 저장 (단순 0/1 값이므로 PNG로 충분)
-            imageio.imwrite(mask_path, (masks[k, ..., 0] * 255).astype(np.uint8))  # k번째 배치 아이템 저장
+            imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
         
             # 데이터셋 항목 추가
             dataset_item = dict()
