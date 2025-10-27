@@ -22,7 +22,7 @@ import time
 from util import *
 import render
 import loss
-import imageio
+import imageio.v2 as imageio
 from datetime import datetime, timezone, timedelta
 import torch.nn.functional as F
 
@@ -141,6 +141,13 @@ if __name__ == "__main__":
         view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         
+        # 마스크를 단일 채널로 변환 [H, W, 1]
+        if mask_img.ndim == 3:
+            # RGB/RGBA인 경우 첫 번째 채널만 사용
+            mask_img = mask_img[..., :1]
+        elif mask_img.ndim == 2:
+            # 그레이스케일 [H, W]인 경우 채널 차원 추가
+            mask_img = mask_img[..., np.newaxis]
 
         loaded_view_images[item['view_path']] = view_img
         loaded_mask_images[item['mask_path']] = mask_img
@@ -218,6 +225,19 @@ if __name__ == "__main__":
             # Convert to torch tensors for recorver_view_position function
             view_img_torch = torch.from_numpy(loaded_view_images[item['view_path']]).float().to(device)
             mask_img_torch = torch.from_numpy(loaded_mask_images[item['mask_path']]).float().to(device)
+            
+            # train_res에 맞게 이미지 크기 조정
+            if view_img_torch.shape[:2] != tuple(FLAGS.train_res):
+                # [H, W, C] -> [1, C, H, W]로 변환하여 interpolate 적용
+                view_img_torch = view_img_torch.permute(2, 0, 1).unsqueeze(0)
+                view_img_torch = F.interpolate(view_img_torch, size=FLAGS.train_res, mode='bilinear', align_corners=False)
+                view_img_torch = view_img_torch.squeeze(0).permute(1, 2, 0)  # [H, W, C]로 복원
+            
+            if mask_img_torch.shape[:2] != tuple(FLAGS.train_res):
+                # [H, W, C] -> [1, C, H, W]로 변환하여 interpolate 적용
+                mask_img_torch = mask_img_torch.permute(2, 0, 1).unsqueeze(0)
+                mask_img_torch = F.interpolate(mask_img_torch, size=FLAGS.train_res, mode='bilinear', align_corners=False)
+                mask_img_torch = mask_img_torch.squeeze(0).permute(1, 2, 0)  # [H, W, C]로 복원
 
             view = recorver_view_position(view_img_torch, mask_img_torch,
                                           min_x=minX, min_y=minY, min_z=minZ,
