@@ -98,6 +98,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--batch', type=int, default=8)
     parser.add_argument('-r', '--train_res', nargs=2, type=int, default=[2048, 2048])
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
+    parser.add_argument('-rm', '--ref_mesh', type=str, default=None)
     parser.add_argument('--voxel_grid_res',nargs=3, type=int, default=[64,64,64])
     
     parser.add_argument('--sdf_loss', type=bool, default=False)  # 이미지 기반 복원에서는 GT 메시가 없으므로 False
@@ -165,8 +166,8 @@ if __name__ == "__main__":
     glctx = dr.RasterizeGLContext()
     
     # Load GT mesh
-    # gt_mesh = load_mesh(FLAGS.ref_mesh, device)
-    # gt_mesh.auto_normals() # compute face normals for visualization
+    gt_mesh = load_mesh(FLAGS.ref_mesh, device)
+    gt_mesh.auto_normals() # compute face normals for visualization
     
     # ==============================================================================================
     #  Create and initialize FlexiCubes
@@ -255,6 +256,8 @@ if __name__ == "__main__":
                                           min_x=minX, min_y=minY, min_z=minZ,
                                           max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
 
+        
+
             mv_batch.append(mv)
             mvp_batch.append(mvp)
             target.append({
@@ -273,6 +276,18 @@ if __name__ == "__main__":
             'mask': torch.stack([t['mask'] for t in target]),  # [B, H, W, 1]
             'depth': torch.stack([t['depth'] for t in target])  # [B, H, W, 4]
         }
+
+        gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
+        
+        #gt_target의 [0]인덱스의 depth를 target_stacked의 depth 와 비교하여 시각화
+        gt_first_depth = gt_target['depth'][0]  # [H, W, 4]
+        target_first_depth = target_stacked['depth'][0]  # [H, W, 4]
+    
+        #target_first_depth와 gt_first_depth의 차이를 시각화
+        depth_diff = torch.abs(target_first_depth - gt_first_depth)  # [H, W, 4]
+        depth_diff_image = (depth_diff[..., :3].mean(dim=-1) * 255).clamp(0, 255).byte().cpu().numpy()
+        imageio.imwrite(os.path.join(FLAGS.out_dir, f'depth_diff_iter_{it:04d}.png'), depth_diff_image)
+
 
         # extract and render FlexiCubes mesh
         voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
