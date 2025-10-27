@@ -151,7 +151,7 @@ if __name__ == "__main__":
         random_radius = random.uniform(focus_observe_radius[0], focus_observe_radius[1])
 
         mv, mvp = render.get_random_camera_batch_custom(focus_observe_count, 
-                                                        fovy=fovy,
+                                                        fovy=np.deg2rad(fovy),
                                                         iter_res=render_resolution,
                                                         position=vertex_coord.cpu().numpy(), device=device)
 
