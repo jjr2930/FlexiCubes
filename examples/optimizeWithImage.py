@@ -277,29 +277,29 @@ if __name__ == "__main__":
             'depth': torch.stack([t['depth'] for t in target])  # [B, H, W, 4]
         }
 
-        gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
+        # gt_target = render.render_mesh_paper(gt_mesh, mv_stack, mvp_stack, FLAGS.train_res)
         
-        #gt_target의 [0]인덱스의 depth를 target_stacked의 depth 와 비교하여 시각화
-        gt_first_depth = gt_target['depth'][0]  # [H, W, 4]
-        target_first_depth = target_stacked['depth'][0]  # [H, W, 4]
+        # #gt_target의 [0]인덱스의 depth를 target_stacked의 depth 와 비교하여 시각화
+        # gt_first_depth = gt_target['depth'][0]  # [H, W, 4]
+        # target_first_depth = target_stacked['depth'][0]  # [H, W, 4]
     
-        #target_first_depth와 gt_first_depth의 차이를 시각화
-        depth_diff = torch.abs(target_first_depth - gt_first_depth)  # [H, W, 4]
-        #depth_diff 정규화
-        depth_min_x = depth_diff[:, 0].min()
-        depth_max_x = depth_diff[:, 0].max()
-        depth_min_y = depth_diff[:, 1].min()
-        depth_max_y = depth_diff[:, 1].max()
-        depth_min_z = depth_diff[:, 2].min()
-        depth_max_z = depth_diff[:, 2].max()
+        # #target_first_depth와 gt_first_depth의 차이를 시각화
+        # depth_diff = torch.abs(target_first_depth - gt_first_depth)  # [H, W, 4]
+        # #depth_diff 정규화
+        # depth_min_x = depth_diff[:, 0].min()
+        # depth_max_x = depth_diff[:, 0].max()
+        # depth_min_y = depth_diff[:, 1].min()
+        # depth_max_y = depth_diff[:, 1].max()
+        # depth_min_z = depth_diff[:, 2].min()
+        # depth_max_z = depth_diff[:, 2].max()
 
-        depth_diff[:, 0] = (depth_diff[:, 0] - depth_min_x) / (depth_max_x - depth_min_x + 1e-8)
-        depth_diff[:, 1] = (depth_diff[:, 1] - depth_min_y) / (depth_max_y - depth_min_y + 1e-8)
-        depth_diff[:, 2] = (depth_diff[:, 2] - depth_min_z) / (depth_max_z - depth_min_z + 1e-8)
+        # depth_diff[:, 0] = (depth_diff[:, 0] - depth_min_x) / (depth_max_x - depth_min_x + 1e-8)
+        # depth_diff[:, 1] = (depth_diff[:, 1] - depth_min_y) / (depth_max_y - depth_min_y + 1e-8)
+        # depth_diff[:, 2] = (depth_diff[:, 2] - depth_min_z) / (depth_max_z - depth_min_z + 1e-8)
 
-        depth_diff_image = (depth_diff[:, :3].detach().cpu().numpy() * 255).astype(np.uint8)    
+        # depth_diff_image = (depth_diff[:, :3].detach().cpu().numpy() * 255).astype(np.uint8)    
         
-        imageio.imwrite(os.path.join(FLAGS.out_dir, f'depth_diff_iter_{it:04d}.png'), depth_diff_image)
+        # imageio.imwrite(os.path.join(FLAGS.out_dir, f'depth_diff_iter_{it:04d}.png'), depth_diff_image)
 
 
         # extract and render FlexiCubes mesh
