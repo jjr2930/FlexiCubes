@@ -254,7 +254,7 @@ if __name__ == "__main__":
         elif focus_mode == 'post':
             if it < focus_post_index:
                 #batch count - focus_count 만큼 data에서 랜덤 선택
-                selected_data.extend(random.sample(data, FLAGS.batch - (FLAGS.focus_count * 3)))
+                selected_data.extend(random.sample(data, FLAGS.batch))
             else:
                 if focus_using_flag[0]:
                     focus_sample_0 = random.sample(focus_data[0], FLAGS.focus_count)
