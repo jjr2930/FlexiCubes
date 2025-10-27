@@ -176,8 +176,8 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
         if type == "mask" :
             img = dr.antialias((rast[..., -1:] > 0).float(), rast, v_pos_clip, mesh.faces.int()) 
             #0번째 마스크를 정보를 로그로 출력해봐
-            mask_image = img[0].detach().cpu().numpy()
-            print(f"Mask image shape: {mask_image.shape}")
+            # mask_image = img[0].detach().cpu().numpy()
+            # print(f"Mask image shape: {mask_image.shape}")
 
         elif type == "depth":
             v_pos_cam = util.xfm_points(mesh.vertices.unsqueeze(0), mv)
@@ -188,16 +188,16 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
             for batch_idx in range(img.shape[0]):
                 depth_img = img[batch_idx].detach().cpu().numpy()
                 #depth_img 의 차원을 출력해봐
-                print(depth_img.shape)
-                for width in range(depth_img.shape[1]):
-                    for height in range(depth_img.shape[0]):
-                        # depth_img rgba(xyzw)의 에서 xyzw
-                        x = depth_img[width,height, 0]
-                        y = depth_img[width,height, 1]
-                        z = depth_img[width,height, 2]
-                        w = depth_img[width,height, 3]
-                        if(x != 0 and y !=0 and z !=0 and w !=0):
-                            print(f"{width},{height}Depth image XYZW values: {x}, {y}, {z}, {w}")
+                # print(depth_img.shape)
+                # for width in range(depth_img.shape[1]):
+                #     for height in range(depth_img.shape[0]):
+                #         # depth_img rgba(xyzw)의 에서 xyzw
+                #         x = depth_img[width,height, 0]
+                #         y = depth_img[width,height, 1]
+                #         z = depth_img[width,height, 2]
+                #         w = depth_img[width,height, 3]
+                #         if(x != 0 and y !=0 and z !=0 and w !=0):
+                #             print(f"{width},{height}Depth image XYZW values: {x}, {y}, {z}, {w}")
 
 
             #     #그냥 xyzw가 rgba라고 생각하고 저장해봐
