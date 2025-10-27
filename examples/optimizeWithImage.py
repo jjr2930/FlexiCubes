@@ -247,6 +247,8 @@ if __name__ == "__main__":
             view_img_torch = torch.from_numpy(view_img).float().to(device)
             mask_img_torch = torch.from_numpy(mask_img).float().to(device)
             
+            print(f"Loaded view image shape: {view_img_torch.shape}, mask image shape: {mask_img_torch.shape}")
+            
             # train_res에 맞게 이미지 크기 조정
             if view_img_torch.shape[:2] != tuple(FLAGS.train_res):
                 # [H, W, C] -> [1, C, H, W]로 변환하여 interpolate 적용
