@@ -25,7 +25,6 @@ import loss
 import imageio.v2 as imageio
 from datetime import datetime, timezone, timedelta
 import torch.nn.functional as F
-from concurrent.futures import ThreadPoolExecutor
 
 import sys
 sys.path.append('..')
@@ -130,49 +129,18 @@ if __name__ == "__main__":
     res_height = json_doc['res_height']
     data = json_doc['data']
 
-    # ==============================================================================================
-    # STEP 1: 멀티스레드로 이미지 파일만 로드 (전처리 없음)
-    # ==============================================================================================
-    raw_view_images = dict()
-    raw_mask_images = dict()
+    loaded_view_images = dict()
+    loaded_mask_images = dict()
 
-    def load_raw_image(item):
-        """이미지 파일만 로드 (채널/차원 처리 안함)"""
+    for item in data:
         view_full_path = os.path.join(FLAGS.working_directory, item['view_path'])
         mask_full_path = os.path.join(FLAGS.working_directory, item['mask_path'])
 
         view_img = imageio.imread(view_full_path)
         mask_img = imageio.imread(mask_full_path)
 
-        return item['view_path'], item['mask_path'], view_img, mask_img
-
-    # 멀티스레드로 원본 이미지 로딩
-    print(f"STEP 1: Loading {len(data)} raw images using multithreading...")
-    start_time = time.time()
-    
-    with ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        results = list(executor.map(load_raw_image, data))
-    
-    # 결과를 딕셔너리에 저장
-    for view_path, mask_path, view_img, mask_img in results:
-        raw_view_images[view_path] = view_img
-        raw_mask_images[mask_path] = mask_img
-    
-    end_time = time.time()
-    print(f"Loaded {len(raw_view_images)} raw images in {end_time - start_time:.2f} seconds.")
-
-    # ==============================================================================================
-    # STEP 2: 로드된 이미지들을 학습용으로 전처리 (채널/차원 맞추기)
-    # ==============================================================================================
-    loaded_view_images = dict()
-    loaded_mask_images = dict()
-
-    print(f"STEP 2: Processing {len(raw_view_images)} images for training...")
-    start_time = time.time()
-
-    for view_path, view_img in raw_view_images.items():
-        # Normalize to [0, 1]
-        view_img = view_img.astype(np.float32) / 255.0
+        view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
+        mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         
         # view 이미지를 RGBA 4채널로 변환, 알파 채널을 1로 고정
         if view_img.ndim == 3 and view_img.shape[-1] == 3:
@@ -183,12 +151,6 @@ if __name__ == "__main__":
             # 이미 RGBA인 경우 알파 채널을 1로 고정
             view_img[..., 3] = 1.0
         
-        loaded_view_images[view_path] = view_img
-
-    for mask_path, mask_img in raw_mask_images.items():
-        # Normalize to [0, 1]
-        mask_img = mask_img.astype(np.float32) / 255.0
-        
         # 마스크를 단일 채널로 변환 [H, W, 1]
         if mask_img.ndim == 3:
             # RGB/RGBA인 경우 첫 번째 채널만 사용
@@ -196,16 +158,10 @@ if __name__ == "__main__":
         elif mask_img.ndim == 2:
             # 그레이스케일 [H, W]인 경우 채널 차원 추가
             mask_img = mask_img[..., np.newaxis]
-        
-        loaded_mask_images[mask_path] = mask_img
 
-    end_time = time.time()
-    print(f"Processed {len(loaded_view_images)} images in {end_time - start_time:.2f} seconds.")
-    
-    # 원본 이미지 메모리 해제
-    del raw_view_images
-    del raw_mask_images
-    
+        loaded_view_images[item['view_path']] = view_img
+        loaded_mask_images[item['mask_path']] = mask_img
+
     os.makedirs(FLAGS.out_dir, exist_ok=True)
     glctx = dr.RasterizeGLContext()
     
@@ -261,11 +217,10 @@ if __name__ == "__main__":
         selected_data = []
 
         #batch 갯수만큼 data에서 환형으로 선택
-        # for b in range(FLAGS.batch):
-        #     selected_data.append(data[data_index])
-        #     data_index = (data_index + 1) % len(data)
+        for b in range(FLAGS.batch):
+            selected_data.append(data[data_index])
+            data_index = (data_index + 1) % len(data)
 
-        selected_data = random.sample(data, FLAGS.batch)
         for item in selected_data:
             #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
             minX = item['view_min_x']
