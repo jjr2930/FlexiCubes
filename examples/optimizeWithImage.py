@@ -131,6 +131,8 @@ if __name__ == "__main__":
 
     # 이미지를 미리 로드하지 않고, 필요할 때마다 로드하는 함수 정의
     def load_and_process_image(item):
+        #이 함수의 동작 시간을 측정하고 싶다.
+        start_time = time.time()
         """매번 호출될 때마다 이미지를 로드하고 전처리"""
         view_full_path = os.path.join(FLAGS.working_directory, item['view_path'])
         mask_full_path = os.path.join(FLAGS.working_directory, item['mask_path'])
@@ -157,6 +159,9 @@ if __name__ == "__main__":
         elif mask_img.ndim == 2:
             # 그레이스케일 [H, W]인 경우 채널 차원 추가
             mask_img = mask_img[..., np.newaxis]
+
+        end_time = time.time()
+        print(f"Image loading and processing time: {end_time - start_time:.4f} seconds")
 
         return view_img, mask_img
 
