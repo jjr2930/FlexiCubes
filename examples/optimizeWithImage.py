@@ -129,10 +129,9 @@ if __name__ == "__main__":
     res_height = json_doc['res_height']
     data = json_doc['data']
 
-    loaded_view_images = dict()
-    loaded_mask_images = dict()
-
-    for item in data:
+    # 이미지를 미리 로드하지 않고, 필요할 때마다 로드하는 함수 정의
+    def load_and_process_image(item):
+        """매번 호출될 때마다 이미지를 로드하고 전처리"""
         view_full_path = os.path.join(FLAGS.working_directory, item['view_path'])
         mask_full_path = os.path.join(FLAGS.working_directory, item['mask_path'])
 
@@ -159,8 +158,9 @@ if __name__ == "__main__":
             # 그레이스케일 [H, W]인 경우 채널 차원 추가
             mask_img = mask_img[..., np.newaxis]
 
-        loaded_view_images[item['view_path']] = view_img
-        loaded_mask_images[item['mask_path']] = mask_img
+        return view_img, mask_img
+
+    print(f"Dataset contains {len(data)} images. Images will be loaded on-demand to save memory.")
 
     os.makedirs(FLAGS.out_dir, exist_ok=True)
     glctx = dr.RasterizeGLContext()
@@ -235,9 +235,12 @@ if __name__ == "__main__":
             mv = torch.tensor(read_mv, dtype=torch.float32, device=device)
             mvp = proj @ mv
 
+            # 매번 이미지를 로드 (메모리 절약)
+            view_img, mask_img = load_and_process_image(item)
+            
             # Convert to torch tensors for recorver_view_position function
-            view_img_torch = torch.from_numpy(loaded_view_images[item['view_path']]).float().to(device)
-            mask_img_torch = torch.from_numpy(loaded_mask_images[item['mask_path']]).float().to(device)
+            view_img_torch = torch.from_numpy(view_img).float().to(device)
+            mask_img_torch = torch.from_numpy(mask_img).float().to(device)
             
             # train_res에 맞게 이미지 크기 조정
             if view_img_torch.shape[:2] != tuple(FLAGS.train_res):
