@@ -161,7 +161,7 @@ if __name__ == "__main__":
             mask_img = mask_img[..., np.newaxis]
 
         end_time = time.time()
-        print(f"Image loading and processing time: {end_time - start_time:.4f} seconds")
+        # print(f"Image loading and processing time: {end_time - start_time:.4f} seconds")
 
         return view_img, mask_img
 
