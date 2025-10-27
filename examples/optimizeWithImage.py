@@ -288,7 +288,7 @@ if __name__ == "__main__":
         diff_depth_loss = depth_loss_with_gt - depth_loss
 
         # Log the differences
-        if(FLAGS.print_loss):
+        if(FLAGS.print_loss == True):
             print(f"============================================")
             print(f"gt mask loss: {mask_loss_with_gt.item()} vs rendered mask loss: {mask_loss.item()}")
             print(f"gt depth loss: {depth_loss_with_gt.item()} vs rendered depth loss: {depth_loss.item()}")
