@@ -128,6 +128,19 @@ if __name__ == "__main__":
     res_height = json_doc['res_height']
     data = json_doc['data']
 
+    loaded_view_images = dict()
+    loaded_mask_images = dict()
+
+    for item in data:
+        view_img = imageio.imread(item['view_path'])
+        mask_img = imageio.imread(item['mask_path'])
+
+        view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
+        mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
+
+        loaded_view_images[item['view_path']] = view_img
+        loaded_mask_images[item['mask_path']] = mask_img
+
     os.makedirs(FLAGS.out_dir, exist_ok=True)
     glctx = dr.RasterizeGLContext()
     
@@ -201,37 +214,13 @@ if __name__ == "__main__":
             view_full_path = os.path.join(FLAGS.working_directory, view_path)
             mask_full_path = os.path.join(FLAGS.working_directory, mask_path)
             
-            sub_start_time = time.time()
-            
-            # Load image files using imageio v2 to avoid deprecation warnings
-            view_img = imageio.v2.imread(view_full_path)  # [H, W, 3 or 4]
-            view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
-
-            sub_start_end = time.time()
-            print(f"Image loading time: {sub_start_end - sub_start_time:.4f} seconds")
-
-
-            sub_start_time = time.time()
-            # Ensure view_img has 4 channels [H, W, 4]
-            if view_img.shape[-1] == 3:
-                print("view_img shape[-1] = 3")
-                # Add alpha channel (all ones)
-                alpha = np.ones((view_img.shape[0], view_img.shape[1], 1), dtype=np.float32)
-                view_img = np.concatenate([view_img, alpha], axis=-1)
-            
-            mask_img = imageio.v2.imread(mask_full_path)  # [H, W] or [H, W, 1]
-            if len(mask_img.shape) == 2:
-                mask_img = mask_img[:, :, np.newaxis]  # Add channel dimension [H, W, 1]
-            mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
-
-            sub_start_end = time.time()
             print(f"Mask loading time: {sub_start_end - sub_start_time:.4f} seconds")
 
             sub_start_time = time.time()
             # Convert to torch tensors for recorver_view_position function
-            view_img_torch = torch.from_numpy(view_img).float().to(device)
-            mask_img_torch = torch.from_numpy(mask_img).float().to(device)
-            
+            view_img_torch = torch.from_numpy(view_img[item['view_path']]).float().to(device)
+            mask_img_torch = torch.from_numpy(mask_img[item['mask_path']]).float().to(device)
+
             view = recorver_view_position(view_img_torch, mask_img_torch,
                                           min_x=minX, min_y=minY, min_z=minZ,
                                           max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
