@@ -175,6 +175,10 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
     for type in return_types:
         if type == "mask" :
             img = dr.antialias((rast[..., -1:] > 0).float(), rast, v_pos_clip, mesh.faces.int()) 
+            #0번째 마스크를 정보를 로그로 출력해봐
+            mask_image = img[0].detach().cpu().numpy()
+            print(f"Mask image shape: {mask_image.shape}")
+
         elif type == "depth":
             v_pos_cam = util.xfm_points(mesh.vertices.unsqueeze(0), mv)
             img, _ = util.interpolate(v_pos_cam, rast, mesh.faces.int())
