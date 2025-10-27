@@ -203,15 +203,21 @@ def recorver_view_position(normalized_view, mask, min_x, max_x, min_y, max_y, mi
     min_x, max_x, min_y, max_y, min_z, max_z: 각 축의 최소/최대 값
     Returns: 복원된 뷰 공간 좌표 [H, W, x,y,z,w]
     """
-    view = torch.zeros_like(normalized_view)
 
     # 마스크가 있는 영역에서만 복원 수행
     valid_mask = mask[..., 0] >= 0.1  # [H, W]
 
+    view = np.zeros_like(normalized_view)
+
+    def recorver_channel(normalized_channel, min_val, max_val):
+        channel = np.zeros_like(normalized_channel)
+        channel[valid_mask] = normalized_channel[valid_mask] * (max_val - min_val) + min_val
+        return channel
+    
     # X, Y, Z 좌표 복원 (마스크 영역만)
-    view[..., 0] = torch.where(valid_mask, normalized_view[..., 0] * (max_x - min_x) + min_x, view[..., 0])
-    view[..., 1] = torch.where(valid_mask, normalized_view[..., 1] * (max_y - min_y) + min_y, view[..., 1])
-    view[..., 2] = torch.where(valid_mask, normalized_view[..., 2] * (max_z - min_z) + min_z, view[..., 2])
+    view[valid_mask, 0] = recorver_channel(view[valid_mask, 0], min_x, max_x)
+    view[valid_mask, 1] = recorver_channel(view[valid_mask, 1], min_y, max_y)
+    view[valid_mask, 2] = recorver_channel(view[valid_mask, 2], min_z, max_z)
 
     return view
 

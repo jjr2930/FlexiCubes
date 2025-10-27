@@ -136,7 +136,7 @@ if __name__ == "__main__":
         
         # 디버깅: 정규화 후 실제 값 범위 확인
         # print(f"  Normalized ranges:")
-        valid_view_norm = view_norm[valid_mask]
+        # valid_view_norm = view_norm[valid_mask]
         # print(f"    X: [{valid_view_norm[:, 0].min():.4f}, {valid_view_norm[:, 0].max():.4f}]")
         # print(f"    Y: [{valid_view_norm[:, 1].min():.4f}, {valid_view_norm[:, 1].max():.4f}]")
         # print(f"    Z: [{valid_view_norm[:, 2].min():.4f}, {valid_view_norm[:, 2].max():.4f}]")
