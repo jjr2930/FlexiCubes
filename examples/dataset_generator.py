@@ -185,7 +185,8 @@ if __name__ == "__main__":
             dataset_item["mask_path"] = os.path.basename(mask_path)
             # mv 행렬 저장 (k번째 배치 아이템)
             dataset_item["mv"] = mv[k].cpu().numpy().tolist()
-            dataset["data"].append(dataset_item)  
+            dataset["focus_data"].append(dataset_item)
+
 
     print("Focus observe views generated.")  
 

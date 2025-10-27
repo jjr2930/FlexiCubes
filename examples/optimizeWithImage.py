@@ -121,10 +121,11 @@ if __name__ == "__main__":
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
-    parser.add_argument('-fc', '--focus_count', type=int, default= 0 )
+    parser.add_argument('-fc', '--focus_count', type=int, default= 2 )
     parser.add_argument('-wd', '--working_directory', type=str, default=None)
     parser.add_argument('-op', '--output_prefix', type=str, default=None)
     parser.add_argument('-df', '--dataset_file', type=str, default=None)
+
     # Use robust boolean parsing so both "--print_loss" and "--print_loss false" work as expected
     # parser.add_argument('-pl', '--print_loss', type=str2bool, nargs='?', const=True, default=False,
     #                     help='Print GT vs rendered losses (use --print_loss or --print_loss true to enable)')
@@ -144,6 +145,7 @@ if __name__ == "__main__":
     res_width = json_doc['res_width']
     res_height = json_doc['res_height']
     data = json_doc['data']
+    focus_data = json_doc['focus_data']
 
     # 이미지를 미리 로드하지 않고, 필요할 때마다 로드하는 함수 정의
     def load_and_process_image(item):
@@ -227,12 +229,14 @@ if __name__ == "__main__":
         mvp_batch = []
         # mvp will be recomputed after mv fix and model composition
         target = []
-        selected_data = []
-
-        #batch 갯수만큼 data에서 환형으로 선택
-        for b in range(FLAGS.batch):
-            selected_data.append(data[data_index])
-            data_index = (data_index + 1) % len(data)
+        #batch count - focus_count 만큼 data에서 랜덤 선택
+        selected_data = random.sample(data, FLAGS.batch - FLAGS.focus_count)
+        
+        #집중 관찰 뷰
+        focus_data_sampled = random.sample(focus_data, FLAGS.focus_count)
+        
+        # 선택된 focus_data 항목들을 selected_data에 추가
+        selected_data.extend(focus_data_sampled)
 
         for item in selected_data:
             #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
