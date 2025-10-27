@@ -141,6 +141,9 @@ if __name__ == "__main__":
         view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         
+        # view 이미지는 항상 RGBA 4채널, 알파 채널을 1로 고정
+        view_img[..., 3] = 1.0  # 알파 채널을 1로 고정
+        
         # 마스크를 단일 채널로 변환 [H, W, 1]
         if mask_img.ndim == 3:
             # RGB/RGBA인 경우 첫 번째 채널만 사용
