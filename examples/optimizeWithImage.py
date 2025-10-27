@@ -140,6 +140,7 @@ if __name__ == "__main__":
 
         view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
+        
 
         loaded_view_images[item['view_path']] = view_img
         loaded_mask_images[item['mask_path']] = mask_img
