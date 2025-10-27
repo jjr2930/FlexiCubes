@@ -137,10 +137,10 @@ if __name__ == "__main__":
         view_full_path = os.path.join(FLAGS.working_directory, item['view_path'])
         mask_full_path = os.path.join(FLAGS.working_directory, item['mask_path'])
 
-        view_img = imageio.imread(view_full_path)
+        # view는 NumPy 바이너리 파일로 로드 (.npy)
+        view_img = np.load(view_full_path)  # 이미 float32 형식으로 정규화된 데이터
+        # mask는 PNG 파일로 로드
         mask_img = imageio.imread(mask_full_path)
-
-        view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         
         # view 이미지를 RGBA 4채널로 변환, 알파 채널을 1로 고정
@@ -228,14 +228,6 @@ if __name__ == "__main__":
 
         for item in selected_data:
             #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
-            minX = item['view_min_x']
-            minY = item['view_min_y']
-            minZ = item['view_min_z']
-            maxX = item['view_max_x']
-            maxY = item['view_max_y']
-            maxZ = item['view_max_z']
-            view_path = item['view_path']
-            mask_path = item['mask_path']
             read_mv = item['mv']
             mv = torch.tensor(read_mv, dtype=torch.float32, device=device)
             mvp = proj @ mv
@@ -243,22 +235,15 @@ if __name__ == "__main__":
             # 매번 이미지를 로드 (메모리 절약)
             view_img, mask_img = load_and_process_image(item)
             
-            # Convert to torch tensors for recorver_view_position function
-            view_img_torch = torch.from_numpy(view_img).float().to(device)
-            mask_img_torch = torch.from_numpy(mask_img).float().to(device)
-
-            view = recorver_view_position(view_img_torch, mask_img_torch,
-                                          min_x=minX, min_y=minY, min_z=minZ,
-                                          max_x=maxX, max_y=maxY, max_z=maxZ)  # [H, W, 4]
-
-        
+            # Convert to torch tensors (원본 view 데이터를 그대로 사용, 정규화 복원 불필요)
+            view_torch = torch.from_numpy(view_img).float().to(device)  # [H, W, 4]
+            mask_torch = torch.from_numpy(mask_img).float().to(device)  # [H, W, 1]
 
             mv_batch.append(mv)
             mvp_batch.append(mvp)
             target.append({
-                'mask': mask_img_torch,  # [H, W, 1]
-                #render.py의 179~180행을 참고하여 리턴하는 img와 차원이 맞도록 수정
-                'depth': view,  # [H, W, 4]
+                'mask': mask_torch,  # [H, W, 1]
+                'depth': view_torch,  # [H, W, 4] - 원본 view 공간 좌표
             })
 
         mv_stack = torch.stack(mv_batch).to(device)  # [B, 4, 4]

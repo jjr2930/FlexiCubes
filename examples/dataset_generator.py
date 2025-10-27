@@ -103,76 +103,22 @@ if __name__ == "__main__":
             del rendered
             torch.cuda.empty_cache()
 
-            #view -> 뷰 공간 좌표계로 변환된 좌표들이야 나는 이걸 0~1 사이로 정규화된 값으로 바꾸고싶다구
-            # 마스크 값이 0.1 이상인 영역만 사용하여 min, max 계산
-            valid_mask = mask[..., 0] >= 0.1  # [H, W]
-            
-            # 유효한 영역의 view 좌표만 추출
-            valid_view = view[valid_mask]  # [N, 4]
-            
-            if len(valid_view) > 0:
-                # X, Y, Z 좌표에서 min, max 구하기 (마스크 0.1 이상인 영역만)
-                view_min_x = valid_view[:, 0].min()
-                view_max_x = valid_view[:, 0].max()
-                view_min_y = valid_view[:, 1].min()
-                view_max_y = valid_view[:, 1].max()
-                view_min_z = valid_view[:, 2].min()
-                view_max_z = valid_view[:, 2].max()
-            else:
-                # 유효한 픽셀이 없는 경우 전체 범위 사용
-                view_min_x = view[:, :, 0].min()
-                view_max_x = view[:, :, 0].max()
-                view_min_y = view[:, :, 1].min()
-                view_max_y = view[:, :, 1].max()
-                view_min_z = view[:, :, 2].min()
-                view_max_z = view[:, :, 2].max()
-            
-            # 디버깅: min/max 값 출력
-            # print(f"  X range: [{view_min_x:.4f}, {view_max_x:.4f}]")
-            # print(f"  Y range: [{view_min_y:.4f}, {view_max_y:.4f}]")
-            # print(f"  Z range: [{view_min_z:.4f}, {view_max_z:.4f}]")
-
-            # 정규화 함수
-            def normalize_channel(channel, min_val, max_val):
-                return (channel - min_val) / (max_val - min_val + 1e-8)
-            
-            # 각 채널 정규화 (마스크 영역만)
-            view_norm = np.zeros_like(view)
-            
-            # 마스크가 있는 영역에서만 정규화 수행
-            view_norm[valid_mask, 0] = normalize_channel(view[valid_mask, 0], view_min_x, view_max_x)
-            view_norm[valid_mask, 1] = normalize_channel(view[valid_mask, 1], view_min_y, view_max_y)
-            view_norm[valid_mask, 2] = normalize_channel(view[valid_mask, 2], view_min_z, view_max_z)
-            
-            # 마스크가 없는 영역은 이미 0으로 초기화되어 있음
-            
-            # 디버깅: 정규화 후 실제 값 범위 확인
-            # print(f"  Normalized ranges:")
-            # valid_view_norm = view_norm[valid_mask]
-            # print(f"    X: [{valid_view_norm[:, 0].min():.4f}, {valid_view_norm[:, 0].max():.4f}]")
-            # print(f"    Y: [{valid_view_norm[:, 1].min():.4f}, {valid_view_norm[:, 1].max():.4f}]")
-            # print(f"    Z: [{valid_view_norm[:, 2].min():.4f}, {valid_view_norm[:, 2].max():.4f}]")
-
-            # 파일 저장 (RGB 채널만 사용)
+            # 파일 저장
             index = i * elevation_steps + j
-            view_path = os.path.join(FLAGS.out_dir, f"view_{index:03d}.png")
+            view_path = os.path.join(FLAGS.out_dir, f"view_{index:03d}.npy")
             mask_path = os.path.join(FLAGS.out_dir, f"mask_{index:03d}.png")
 
-            imageio.imwrite(view_path, (view_norm[:, :, :3] * 255).astype(np.uint8))
+            # view는 NumPy 바이너리로 저장 (원본 float32 값 그대로, 정밀도 손실 없음)
+            np.save(view_path, view)
+            # mask는 PNG로 저장 (단순 0/1 값이므로 PNG로 충분)
             imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
             
             # 데이터셋 항목 추가
             dataset_item = dict()
             dataset_item["view_path"] = os.path.basename(view_path)
             dataset_item["mask_path"] = os.path.basename(mask_path)
-            dataset_item["view_min_x"] = float(view_min_x)
-            dataset_item["view_min_y"] = float(view_min_y)
-            dataset_item["view_min_z"] = float(view_min_z)
-            dataset_item["view_max_x"] = float(view_max_x)
-            dataset_item["view_max_y"] = float(view_max_y)
-            dataset_item["view_max_z"] = float(view_max_z)
-            #mv 행렬 저장
-            dataset_item["mv"] = mv.cpu().numpy().tolist()  # mv 행렬 저장
+            # mv 행렬 저장
+            dataset_item["mv"] = mv.cpu().numpy().tolist()
 
             dataset["data"].append(dataset_item)
         print(f"Generated views for azimuth {azimuth} degrees.")
