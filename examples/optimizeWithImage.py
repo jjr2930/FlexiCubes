@@ -132,8 +132,12 @@ if __name__ == "__main__":
     loaded_mask_images = dict()
 
     for item in data:
-        view_img = imageio.imread(item['view_path'])
-        mask_img = imageio.imread(item['mask_path'])
+
+        view_full_path = os.path.join(FLAGS.working_directory, item['view_path'])
+        mask_full_path = os.path.join(FLAGS.working_directory, item['mask_path'])
+
+        view_img = imageio.imread(view_full_path)
+        mask_img = imageio.imread(mask_full_path)
 
         view_img = view_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
         mask_img = mask_img.astype(np.float32) / 255.0  # Normalize to [0, 1]
@@ -211,9 +215,6 @@ if __name__ == "__main__":
             mv = torch.tensor(read_mv, dtype=torch.float32, device=device)
             mvp = proj @ mv
 
-            view_full_path = os.path.join(FLAGS.working_directory, view_path)
-            mask_full_path = os.path.join(FLAGS.working_directory, mask_path)
-            
             print(f"Mask loading time: {sub_start_end - sub_start_time:.4f} seconds")
 
             sub_start_time = time.time()
