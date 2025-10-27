@@ -37,6 +37,10 @@ if __name__ == "__main__":
     parser.add_argument('-fov', '--fovy', type=float, default=45.0)
     parser.add_argument('-cn', '--cam_near', type=float, default=0.1)
     parser.add_argument('-cf', '--cam_far', type=float, default=100.0)
+    parser.add_argument('-fv', '--focus_observe_vertex', nargs=3, type=int, default=[0,1,2])
+    parser.add_argument('-fr', '--focus_observe_radius', nargs=2, type=float, default=[2.0,4.0])
+    parser.add_argument('-fs', '--focus_observe_count', type=int, default=30)
+    
     FLAGS = parser.parse_args()
 
     os.makedirs(FLAGS.out_dir, exist_ok=True)
@@ -55,6 +59,14 @@ if __name__ == "__main__":
     cam_far = FLAGS.cam_far
     radius = FLAGS.radius
     elevation_limit = FLAGS.elevation_limit
+    focus_observe_vertex = FLAGS.focus_observe_vertex #index of vertex to focus and observe
+    focus_observe_radius = FLAGS.focus_observe_radius
+    focus_observe_count = FLAGS.focus_observe_count
+
+    #print arguments
+    print("Arguments:")
+    for arg in vars(FLAGS):
+        print(f"  {arg}: {getattr(FLAGS, arg)}")
 
     # 데이터셋 정보 초기화
     dataset = dict()
@@ -77,8 +89,8 @@ if __name__ == "__main__":
 
     for i in range(azimuth_steps):
         azimuth = i * azimuth_delta
-        for j in range(elevation_steps):
-            elevation = elevation_limit[0] + j * elevation_delta  # -80도에서 +80도까지
+        for i in range(elevation_steps):
+            elevation = elevation_limit[0] + i * elevation_delta  # -80도에서 +80도까지
 
             # 한 장씩 렌더링하여 메모리 절약
             random_radius = random.uniform(radius[0], radius[1])
@@ -95,7 +107,7 @@ if __name__ == "__main__":
             # 배치 차원 추가 (render_mesh_paper는 배치를 기대함)
             mv_batch = mv.unsqueeze(0)
             mvp_batch = mvp.unsqueeze(0)
-            
+
             # 렌더링
             rendered = render.render_mesh_paper(gt_mesh, mv_batch, mvp_batch, render_resolution)
             
@@ -107,7 +119,7 @@ if __name__ == "__main__":
             torch.cuda.empty_cache()
 
             # 파일 저장
-            index = i * elevation_steps + j
+            index = i * elevation_steps + i
             view_path = os.path.join(FLAGS.out_dir, f"view_{index:03d}.npy")
             mask_path = os.path.join(FLAGS.out_dir, f"mask_{index:03d}.png")
 
@@ -125,7 +137,60 @@ if __name__ == "__main__":
 
             dataset["data"].append(dataset_item)
         print(f"Generated views for azimuth {azimuth} degrees.")
+
+    print("Generated focus observe views.")
     
+    for i in range(3):
+        if i < 0 or i >= len(focus_observe_vertex):
+            print(f"Skipping invalid focus observe vertex index: {i}")
+            continue
+
+        vertex_index = gt_mesh.faces[focus_observe_vertex[i]][0]  # 해당 삼각형의 0번째 정점 인덱스
+        vertex_coord = gt_mesh.vertices[vertex_index]   # 해당 정점의 좌표 (Tensor)
+            
+        random_radius = random.uniform(focus_observe_radius[0], focus_observe_radius[1])
+
+        mv, mvp = render.get_random_camera_batch_custom(focus_observe_count, 
+                                                        fovy=fovy,
+                                                        iter_res=render_resolution,
+                                                        position=vertex_coord.cpu().numpy(), device=device)
+
+        # 배치 차원 추가 (render_mesh_paper는 배치를 기대함)
+        mv_batch = mv.unsqueeze(0)
+        mvp_batch = mvp.unsqueeze(0)
+
+        # 렌더링
+        rendered = render.render_mesh_paper(gt_mesh, mv_batch, mvp_batch, render_resolution)
+        
+        view = rendered['depth'][0].cpu().numpy()  # [H, W, 4]
+        mask = rendered['mask'][0].cpu().numpy()    # [H, W, 1]
+        
+        # 메모리 정리
+        del rendered
+        torch.cuda.empty_cache()
+
+        # 파일 저장 focus_obsuve_count 만큼 하나로 들어가있다 나누어서 저장
+        for k in range(focus_observe_count):
+            index = k * focus_observe_count + i
+
+            view_path = os.path.join(FLAGS.out_dir, f"view_fc{index:04d}.npy")
+            mask_path = os.path.join(FLAGS.out_dir, f"mask_fc{index:04d}.png")
+
+            # view는 NumPy 바이너리로 저장 (원본 float32 값 그대로, 정밀도 손실 없음)
+            np.save(view_path, view)
+            # mask는 PNG로 저장 (단순 0/1 값이므로 PNG로 충분)
+            imageio.imwrite(mask_path, (mask[..., 0] * 255).astype(np.uint8))
+        
+            # 데이터셋 항목 추가
+            dataset_item = dict()
+            dataset_item["view_path"] = os.path.basename(view_path)
+            dataset_item["mask_path"] = os.path.basename(mask_path)
+            # mv 행렬 저장
+            dataset_item["mv"] = mv[k].cpu().numpy().tolist()
+            dataset["data"].append(dataset_item)  
+            
+    print("Focus observe views generated.")  
+
     #데이터셋 json 저장
     dataset_json_path = os.path.join(FLAGS.out_dir, "dataset.json")
 
