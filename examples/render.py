@@ -184,20 +184,20 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
             img, _ = util.interpolate(v_pos_cam, rast, mesh.faces.int())
             chose_one = img[0].detach().cpu().numpy()
             print(f"Depth image shape: {chose_one.shape}")
-            # # 배치 내 각 이미지를 개별적으로 저장
-            # for batch_idx in range(img.shape[0]):
-            #     depth_img = img[batch_idx].detach().cpu().numpy()
-            #     #depth_img 의 차원을 출력해봐
-            #     # print(depth_img.shape)
-            #     # for width in range(depth_img.shape[1]):
-            #     #     for height in range(depth_img.shape[0]):
-            #     #         # depth_img rgba(xyzw)의 에서 xyzw
-            #     #         x = depth_img[width,height, 0]
-            #     #         y = depth_img[width,height, 1]
-            #     #         z = depth_img[width,height, 2]
-            #     #         w = depth_img[width,height, 3]
-            #     #         if(x != 0 and y !=0 and z !=0 and w !=0):
-            #     #             print(f"{width},{height}Depth image XYZW values: {x}, {y}, {z}, {w}")
+            # 배치 내 각 이미지를 개별적으로 저장
+            for batch_idx in range(img.shape[0]):
+                depth_img = img[batch_idx].detach().cpu().numpy()
+                #depth_img 의 차원을 출력해봐
+                print(depth_img.shape)
+                for width in range(depth_img.shape[1]):
+                    for height in range(depth_img.shape[0]):
+                        # depth_img rgba(xyzw)의 에서 xyzw
+                        x = depth_img[width,height, 0]
+                        y = depth_img[width,height, 1]
+                        z = depth_img[width,height, 2]
+                        w = depth_img[width,height, 3]
+                        if(x != 0 and y !=0 and z !=0 and w !=0):
+                            print(f"{width},{height}Depth image XYZW values: {x}, {y}, {z}, {w}")
 
 
             #     #그냥 xyzw가 rgba라고 생각하고 저장해봐
