@@ -108,8 +108,9 @@ if __name__ == "__main__":
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
     parser.add_argument('-fc', '--focus_count', type=int, default= 0 )
     parser.add_argument('-fv', '--focus_observe_vertex', nargs=2, type=int, default=[0,1])
-
+    parser.add_argument('-mc', '--mixing_count', type=int, default=3)
     FLAGS = parser.parse_args()
+
     device = 'cuda'
     
     os.makedirs(FLAGS.out_dir, exist_ok=True)
@@ -161,13 +162,12 @@ if __name__ == "__main__":
     # ==============================================================================================   
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
-        # sample random camera poses
-        if it < FLAGS.focus_count :
-            mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
-        else :
-            #target triangle index is  22446, 58980
-            # 먼저 메시의 면 개수를 확인하고 안전한 인덱스 사용
-            num_faces = gt_mesh.faces.shape[0]
+
+        mv, mvp = render.get_random_camera_batch(FLAGS.batch - FLAGS.mixing_count, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
+        
+        #target triangle index is  22446, 58980
+        # 먼저 메시의 면 개수를 확인하고 안전한 인덱스 사용
+        for mix_it in range(FLAGS.mixing_count):
             vertexIndex:int = 0
             if it % 2 == 0:
                 vertexIndex = FLAGS.focus_observe_vertex[0]
@@ -178,8 +178,37 @@ if __name__ == "__main__":
             vertex_coord = gt_mesh.vertices[vertexIndex]   # 해당 정점의 좌표 (Tensor)
             # print(f"it : {it}, triangleIndex : {triangleIndex}, vertex_index : {vertex_index}, vertex_coord : {vertex_coord}");
 
-            mv, mvp = render.get_random_camera_batch_custom(FLAGS.batch, iter_res=FLAGS.train_res, position=vertex_coord.cpu().numpy(),device=device)
+            sub_mv, sub_mvp = render.get_random_camera_batch_custom(1, iter_res=FLAGS.train_res, position=vertex_coord.cpu().numpy(),device=device)
+            mv = torch.cat([mv, sub_mv], dim=0)
+            mvp = torch.cat([mvp, sub_mvp], dim=0)
+
         
+    # ==============================================================================================
+    #  original code
+    # ==============================================================================================   
+
+        # sample random camera poses
+        # if it < FLAGS.focus_count :
+        #     mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
+        # else :
+        #     #target triangle index is  22446, 58980
+        #     # 먼저 메시의 면 개수를 확인하고 안전한 인덱스 사용
+        #     num_faces = gt_mesh.faces.shape[0]
+        #     vertexIndex:int = 0
+        #     if it % 2 == 0:
+        #         vertexIndex = FLAGS.focus_observe_vertex[0]
+        #     else : 
+        #         vertexIndex = FLAGS.focus_observe_vertex[1]                          
+
+        #     #vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
+        #     vertex_coord = gt_mesh.vertices[vertexIndex]   # 해당 정점의 좌표 (Tensor)
+        #     # print(f"it : {it}, triangleIndex : {triangleIndex}, vertex_index : {vertex_index}, vertex_coord : {vertex_coord}");
+
+        #     mv, mvp = render.get_random_camera_batch_custom(FLAGS.batch, iter_res=FLAGS.train_res, position=vertex_coord.cpu().numpy(),device=device)
+    # ==============================================================================================
+    #  original end
+    # ==============================================================================================   
+
         # render gt mesh
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
         
