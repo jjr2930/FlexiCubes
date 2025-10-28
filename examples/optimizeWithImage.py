@@ -177,7 +177,7 @@ if __name__ == "__main__":
             mask_img = mask_img[..., np.newaxis]
 
         duration = time.time() - start_time
-        print(f"Image loading and processing time: {time_to_string(duration)}")
+        print(f"1:Image loading and processing time: {time_to_string(duration)}")
 
         return view_img, mask_img
 
@@ -285,7 +285,7 @@ if __name__ == "__main__":
                 'depth': view_torch,  # [H, W, 4] - 원본 view 공간 좌표
             })
         duration = time.time() - start_time
-        print(f"Image loading and processing time: {time_to_string(duration)}")
+        print(f"2:Image loading and processing time: {time_to_string(duration)}")
 
         mv_stack = torch.stack(mv_batch).to(device)  # [B, 4, 4]
         mvp_stack = torch.stack(mvp_batch).to(device)  # [B, 4, 4]
