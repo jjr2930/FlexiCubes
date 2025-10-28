@@ -169,7 +169,7 @@ if __name__ == "__main__":
         # 먼저 메시의 면 개수를 확인하고 안전한 인덱스 사용
         for mix_it in range(FLAGS.mixing_count):
             vertexIndex:int = 0
-            if it % 2 == 0:
+            if mix_it % 2 == 0:
                 vertexIndex = FLAGS.focus_observe_vertex[0]
             else : 
                 vertexIndex = FLAGS.focus_observe_vertex[1]                          
