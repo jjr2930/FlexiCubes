@@ -187,8 +187,8 @@ if __name__ == "__main__":
     glctx = dr.RasterizeGLContext()
     
     # Load GT mesh
-    gt_mesh = load_mesh(FLAGS.ref_mesh, device)
-    gt_mesh.auto_normals() # compute face normals for visualization
+    # gt_mesh = load_mesh(FLAGS.ref_mesh, device)
+    # gt_mesh.auto_normals() # compute face normals for visualization
     
     # ==============================================================================================
     #  Create and initialize FlexiCubes
