@@ -182,11 +182,11 @@ def render_mesh_paper(mesh, mv, mvp, iter_res, return_types = ["mask", "depth"],
         elif type == "depth":
             v_pos_cam = util.xfm_points(mesh.vertices.unsqueeze(0), mv)
             img, _ = util.interpolate(v_pos_cam, rast, mesh.faces.int())
-            chose_one = img[0].detach().cpu().numpy()
+            # chose_one = img[0].detach().cpu().numpy()
             # print(f"Depth image shape: {chose_one.shape}")
             # 배치 내 각 이미지를 개별적으로 저장
-            for batch_idx in range(img.shape[0]):
-                depth_img = img[batch_idx].detach().cpu().numpy()
+            # for batch_idx in range(img.shape[0]):
+            #     depth_img = img[batch_idx].detach().cpu().numpy()
                 #depth_img 의 차원을 출력해봐
                 # print(depth_img.shape)
                 # for width in range(depth_img.shape[1]):
