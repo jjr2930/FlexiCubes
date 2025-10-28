@@ -107,6 +107,7 @@ if __name__ == "__main__":
     parser.add_argument('-si', '--save_interval', type=int, default=20)
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
     parser.add_argument('-fc', '--focus_count', type=int, default= 0 )
+    parser.add_argument('-fv', '--focus_observe_vertex', nargs=2, type=int, default=[0,1])
 
     FLAGS = parser.parse_args()
     device = 'cuda'
@@ -167,14 +168,14 @@ if __name__ == "__main__":
             #target triangle index is  22446, 58980
             # 먼저 메시의 면 개수를 확인하고 안전한 인덱스 사용
             num_faces = gt_mesh.faces.shape[0]
-            triangleIndex:int = 0
+            vertexIndex:int = 0
             if it % 2 == 0:
-                triangleIndex = min(6472, num_faces - 1)
+                vertexIndex = FLAGS.focus_observe_vertex[0]
             else : 
-                triangleIndex = min(19706, num_faces - 1)                                
+                vertexIndex = FLAGS.focus_observe_vertex[1]                          
 
-            vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
-            vertex_coord = gt_mesh.vertices[vertex_index]   # 해당 정점의 좌표 (Tensor)
+            #vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
+            vertex_coord = gt_mesh.vertices[vertexIndex]   # 해당 정점의 좌표 (Tensor)
             # print(f"it : {it}, triangleIndex : {triangleIndex}, vertex_index : {vertex_index}, vertex_coord : {vertex_coord}");
 
             mv, mvp = render.get_random_camera_batch_custom(FLAGS.batch, iter_res=FLAGS.train_res, position=vertex_coord.cpu().numpy(),device=device)
