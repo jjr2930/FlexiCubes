@@ -25,7 +25,6 @@ import loss
 import imageio.v2 as imageio
 from datetime import datetime, timezone, timedelta
 import torch.nn.functional as F
-from concurrent.futures import ThreadPoolExecutor
 
 import sys
 sys.path.append('..')
@@ -177,45 +176,10 @@ if __name__ == "__main__":
             # 그레이스케일 [H, W]인 경우 채널 차원 추가
             mask_img = mask_img[..., np.newaxis]
 
-        end_time = time.time()
-        # print(f"Image loading and processing time: {end_time - start_time:.4f} seconds")
+        duration = time.time() - start_time
+        print(f"Image loading and processing time: {time_to_string(duration)}")
 
         return view_img, mask_img
-
-    # Prefetch helpers
-    def load_batch_images(selected_data):
-        views = []
-        masks = []
-        for it in selected_data:
-            v, m = load_and_process_image(it)
-            views.append(v)
-            masks.append(m)
-        return views, masks
-
-    def select_batch_for_iter(iter_idx):
-        # Mirror existing selection logic to enable prefetching for the next iteration
-        sel = []
-        try:
-            if focus_mode == 'middle':
-                sel = random.sample(data, FLAGS.batch - (FLAGS.focus_count * 3))
-                if focus_using_flag[0]:
-                    sel.extend(random.sample(focus_data[0], FLAGS.focus_count))
-                if focus_using_flag[1]:
-                    sel.extend(random.sample(focus_data[1], FLAGS.focus_count))
-            elif focus_mode == 'post':
-                if iter_idx < focus_post_index:
-                    sel.extend(random.sample(data, FLAGS.batch))
-                else:
-                    if focus_using_flag[0]:
-                        sel.extend(random.sample(focus_data[0], FLAGS.focus_count))
-                    if focus_using_flag[1]:
-                        sel.extend(random.sample(focus_data[1], FLAGS.focus_count))
-            else:
-                sel = random.sample(data, FLAGS.batch)
-        except NameError:
-            # Fallback: if focus variables aren't defined, sample uniformly
-            sel = random.sample(data, FLAGS.batch)
-        return sel
 
     print(f"Dataset contains {len(data)} images. Images will be loaded on-demand to save memory.")
 
@@ -262,13 +226,7 @@ if __name__ == "__main__":
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
-    # Initialize prefetch executor and warm-up prefetch for iteration 0 and 1
-    prefetch_executor = ThreadPoolExecutor(max_workers=2)
-    selected_data = select_batch_for_iter(0)
-    current_future = prefetch_executor.submit(load_batch_images, selected_data)
-    next_selected_data = select_batch_for_iter(1)
-    next_future = prefetch_executor.submit(load_batch_images, next_selected_data)
-
+    data_index = 0;
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
 
@@ -277,20 +235,48 @@ if __name__ == "__main__":
         mvp_batch = []
         # mvp will be recomputed after mv fix and model composition
         target = []
-        # Use prefetched batch
-        views_np, masks_np = current_future.result()
+        selected_data = []
         
-        for idx, item in enumerate(selected_data):
+        start_time = time.time()
+        if focus_mode == 'middle':
+            #batch count - focus_count 만큼 data에서 랜덤 선택
+            selected_data = random.sample(data, FLAGS.batch - (FLAGS.focus_count * 3))
+            
+            #집중 관찰 뷰
+            if focus_using_flag[0]:
+                focus_sample_0 = random.sample(focus_data[0], FLAGS.focus_count)
+                selected_data.extend(focus_sample_0)
+            if focus_using_flag[1]:
+                focus_sample_1 = random.sample(focus_data[1], FLAGS.focus_count)
+                selected_data.extend(focus_sample_1)
+                
+        elif focus_mode == 'post':
+            if it < focus_post_index:
+                #batch count - focus_count 만큼 data에서 랜덤 선택
+                selected_data.extend(random.sample(data, FLAGS.batch))
+            else:
+                if focus_using_flag[0]:
+                    focus_sample_0 = random.sample(focus_data[0], FLAGS.focus_count)
+                    selected_data.extend(focus_sample_0)
+                if focus_using_flag[1]:
+                    focus_sample_1 = random.sample(focus_data[1], FLAGS.focus_count)
+                    selected_data.extend(focus_sample_1)
+        duration = time.time() - start_time
+        print(f"Data selection time: {time_to_string(duration)}")
+
+        start_time = time.time()
+        for item in selected_data:
             #print(time_to_string(time.time(), prefix=f"Processing {item['view_path']}"))
             read_mv = item['mv']
             mv = torch.tensor(read_mv, dtype=torch.float32, device=device)
             mvp = proj @ mv
 
-            # Prefetched numpy arrays -> pinned CPU tensors -> non-blocking GPU transfer
-            view_cpu = torch.from_numpy(views_np[idx]).pin_memory()
-            mask_cpu = torch.from_numpy(masks_np[idx]).pin_memory()
-            view_torch = view_cpu.to(device, non_blocking=True).float()  # [H, W, 4]
-            mask_torch = mask_cpu.to(device, non_blocking=True).float()  # [H, W, 1]
+            # 매번 이미지를 로드 (메모리 절약)
+            view_img, mask_img = load_and_process_image(item)
+            
+            # Convert to torch tensors (원본 view 데이터를 그대로 사용, 정규화 복원 불필요)
+            view_torch = torch.from_numpy(view_img).float().to(device)  # [H, W, 4]
+            mask_torch = torch.from_numpy(mask_img).float().to(device)  # [H, W, 1]
 
             mv_batch.append(mv)
             mvp_batch.append(mvp)
@@ -298,12 +284,8 @@ if __name__ == "__main__":
                 'mask': mask_torch,  # [H, W, 1]
                 'depth': view_torch,  # [H, W, 4] - 원본 view 공간 좌표
             })
-
-        # Schedule next prefetch (overlaps with compute below)
-        selected_data = next_selected_data
-        current_future = next_future
-        next_selected_data = select_batch_for_iter(it + 2)
-        next_future = prefetch_executor.submit(load_batch_images, next_selected_data)
+        duration = time.time() - start_time
+        print(f"Image loading and processing time: {time_to_string(duration)}")
 
         mv_stack = torch.stack(mv_batch).to(device)  # [B, 4, 4]
         mvp_stack = torch.stack(mvp_batch).to(device)  # [B, 4, 4]
