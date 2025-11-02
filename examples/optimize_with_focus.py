@@ -106,9 +106,10 @@ if __name__ == "__main__":
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
-    parser.add_argument('-fc', '--focus_count', type=int, default=0)
-    parser.add_argument('-fv', '--focus_observe_vertex', nargs=2, type=int, default=[0,1])
-    parser.add_argument('-mc', '--mixing_count', type=int, default=3)
+    # parser.add_argument('-fc', '--focus_count', type=int, default=0)
+    # parser.add_argument('-fv', '--focus_observe_vertex', nargs=2, type=int, default=[0,1])
+    # parser.add_argument('-mc', '--mixing_count', type=int, default=3)
+    parser.add_argument('-fsi', '--focus_start_iteration', type=int, default=2)
     parser.add_argument('-fcd', '--focus_capture_data', type=str, default=None)
     FLAGS = parser.parse_args()
 
