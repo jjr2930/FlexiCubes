@@ -174,38 +174,67 @@ if __name__ == "__main__":
     num_vertices = gt_mesh.vertices.shape[0]
     # print(f"num_faces : {num_faces}, num_vertices : {num_vertices}")
 
+    eye = [
+        [1,0,0],
+        [0,1,0],
+        [0,0,1],
+    ]
+    at = [
+        [0,0,0],
+        [0,0,0],
+        [0,0,0]
+    ]
+    up = [
+        [0,1,0],
+        [0,1,0],
+        [0,1,0]
+    ]
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
+            
+        mv_list = []
+        mvp_list = []
+        for b in range(FLAGS.batch):
+            mv = util.viewMatrix(eye[b], at[b], up[b], device=device)
+            projection = util.perspective(np.deg2rad(60.0), FLAGS.train_res[0]/FLAGS.train_res[1], 0.1, 1000.0, device=device)
+            mvp = projection @ mv
+            mv_list.append(mv)
+            mvp_list.append(mvp)
 
-        if(it < FLAGS.focus_start_iteration ):
-            mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
-        else :
-            # sample random focus data from the loaded focus data
-            selected_focus_data = random.choices(focus_data, k=FLAGS.batch)
+        mv = torch.stack(mv_list, dim=0)
+        mvp = torch.stack(mvp_list, dim=0)
 
-            mv_list = []
-            mvp_list = []
-            for data in selected_focus_data:
-                # 딕셔너리에서 x, y, z 값을 추출하여 배열로 변환
-                position = np.array([data["cameraPosition"]["x"], data["cameraPosition"]["y"], data["cameraPosition"]["z"]])
-                lookat = np.array([data["targetPosition"]["x"], data["targetPosition"]["y"], data["targetPosition"]["z"]])
-                fovy = np.deg2rad(data["fovy"])  # 도를 라디안으로 변환
-                #up은 0,1,0 고정
-                up = np.array([0, 1, 0])
-                # numpy 배열을 torch 텐서로 변환
-                position = torch.tensor(position, dtype=torch.float32, device=device)
-                lookat = torch.tensor(lookat, dtype=torch.float32, device=device)
-                up = torch.tensor(up, dtype=torch.float32, device=device)
-                mv = util.viewMatrix(position, lookat, up, device=device)
-                projection = util.perspective(fovy, FLAGS.train_res[0]/FLAGS.train_res[1], 0.1, 1000.0, device=device)
-                mvp = projection @ mv
-                mv_list.append(mv)
-                mvp_list.append(mvp)
-            mv = torch.stack(mv_list, dim=0)
-            mvp = torch.stack(mvp_list, dim=0)
+
+
+        # if(it < FLAGS.focus_start_iteration ):
+        #     mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
+        # else :
+        #     # sample random focus data from the loaded focus data
+        #     selected_focus_data = random.choices(focus_data, k=FLAGS.batch)
+
+        #     mv_list = []
+        #     mvp_list = []
+        #     for data in selected_focus_data:
+        #         # 딕셔너리에서 x, y, z 값을 추출하여 배열로 변환
+        #         position = np.array([data["cameraPosition"]["x"], data["cameraPosition"]["y"], data["cameraPosition"]["z"]])
+        #         lookat = np.array([data["targetPosition"]["x"], data["targetPosition"]["y"], data["targetPosition"]["z"]])
+        #         fovy = np.deg2rad(data["fovy"])  # 도를 라디안으로 변환
+        #         #up은 0,1,0 고정
+        #         up = np.array([0, 1, 0])
+        #         # numpy 배열을 torch 텐서로 변환
+        #         position = torch.tensor(position, dtype=torch.float32, device=device)
+        #         lookat = torch.tensor(lookat, dtype=torch.float32, device=device)
+        #         up = torch.tensor(up, dtype=torch.float32, device=device)
+        #         mv = util.viewMatrix(position, lookat, up, device=device)
+        #         projection = util.perspective(fovy, FLAGS.train_res[0]/FLAGS.train_res[1], 0.1, 1000.0, device=device)
+        #         mvp = projection @ mv
+        #         mv_list.append(mv)
+        #         mvp_list.append(mvp)
+        #     mv = torch.stack(mv_list, dim=0)
+        #     mvp = torch.stack(mvp_list, dim=0)
     # ==============================================================================================
     #  original code
     # ==============================================================================================   
