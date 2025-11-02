@@ -135,6 +135,9 @@ if __name__ == "__main__":
     
     # Load GT mesh
     gt_mesh = load_mesh(FLAGS.ref_mesh, device)
+    # gt_mesh를 OBJ파일로 저장해줘
+    trimesh.Trimesh(vertices=gt_mesh.vertices.cpu().numpy(), faces=gt_mesh.faces.cpu().numpy()).export(FLAGS.out_dir + "/gt_mesh.obj")
+    
     gt_mesh.auto_normals() # compute face normals for visualization
     
     # ==============================================================================================
