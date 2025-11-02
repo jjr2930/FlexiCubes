@@ -13,14 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-import json
 import numpy as np
 import torch
 import nvdiffrast.torch as dr
 import trimesh
 import os
 import time
-import util
+from util import *
 import render
 import loss
 import imageio
@@ -107,23 +106,11 @@ if __name__ == "__main__":
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
     parser.add_argument('-ss', '--save_step', type=bool, default=False)
-    #parser.add_argument('-mc', '--mixing_count', type=int, default=3)
-    parser.add_argument('-fsi', '--focus_start_iteration', type=int, default=2)
+    parser.add_argument('-fc', '--focus_count', type=int, default=0)
+    parser.add_argument('-fv', '--focus_observe_vertex', nargs=2, type=int, default=[0,1])
+    parser.add_argument('-mc', '--mixing_count', type=int, default=3)
     parser.add_argument('-fcd', '--focus_capture_data', type=str, default=None)
     FLAGS = parser.parse_args()
-
-    # ==============================================================================================
-    #  parse focus data
-    # ==============================================================================================
-
-    if FLAGS.focus_capture_data is None:
-        print("No focus capture data path provided. Using default focus observe vertices.")
-        sys.exit(0)
-    
-    #load focus data it json file
-    focus_data_json = json.load(open(FLAGS.focus_capture_data, 'r'))
-    focus_data = focus_data_json["items"]
-
 
     device = 'cuda'
     
@@ -177,27 +164,7 @@ if __name__ == "__main__":
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
 
-        if(FLAGS.focus_start_iteration < it):
-            mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
-        else :
-            # sample random focus data from the loaded focus data
-            selected_focus_data = random.choices(focus_data, k=FLAGS.batch)
-
-            mv_list = []
-            mvp_list = []
-            for data in selected_focus_data:
-                position = np.array(data["cameraPosition"])
-                lookat = np.array(data["targetPosition"])
-                fovy = data["fovy"]
-                #up은 0,1,0 고정
-                up = np.array([0, 1, 0])
-                mv = util.viewMatrix(position, lookat, up, device=device)
-                projection = util.perspective(fovy, FLAGS.train_res[0]/FLAGS.train_res[1], 0.1, 1000.0, device=device)
-                mvp = projection @ mv
-                mv_list.append(mv)
-                mvp_list.append(mvp)
-            mv = torch.stack(mv_list, dim=0)
-            mvp = torch.stack(mvp_list, dim=0)
+        mv, mvp = render.get_random_camera_batch(FLAGS.batch - FLAGS.mixing_count, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
         
         
     # ==============================================================================================
