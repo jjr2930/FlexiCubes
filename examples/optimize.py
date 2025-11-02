@@ -177,7 +177,7 @@ if __name__ == "__main__":
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
 
-        if(FLAGS.focus_start_iteration < it):
+        if(it < FLAGS.focus_start_iteration ):
             mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
         else :
             # sample random focus data from the loaded focus data
