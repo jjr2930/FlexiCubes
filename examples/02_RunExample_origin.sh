@@ -1,6 +1,6 @@
 #!/bin/sh
 
-python optimize.py --ref_mesh "/workspace/FlexiCubes/examples/data/inputmodels/africa_man.obj" \
+python optimize_with_focus.py --ref_mesh "/workspace/FlexiCubes/examples/data/inputmodels/africa_man/africa_man.obj" \
     --out_dir out/africa_man_origin \
     --voxel_grid_res 128 128 128 \
     --iter=100 \
