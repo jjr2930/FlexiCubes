@@ -70,6 +70,8 @@ def rotate_y(a, device=None):
                          [ 0, 0, 0, 1]], dtype=torch.float32, device=device)
     
 def viewMatrix(eye, at, up, device=None):
+    print(eye, at, up)
+
     zaxis = safe_normalize(eye - at)
     xaxis = safe_normalize(torch.cross(up, zaxis))
     yaxis = torch.cross(zaxis, xaxis)
