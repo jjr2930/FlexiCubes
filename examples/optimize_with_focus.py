@@ -174,21 +174,21 @@ if __name__ == "__main__":
     num_vertices = gt_mesh.vertices.shape[0]
     # print(f"num_faces : {num_faces}, num_vertices : {num_vertices}")
 
-    eye = [
+    eye = torch.tensor([
         [1,0,0],
         [0,1,0],
         [0,0,1],
-    ]
-    at = [
+    ], dtype=torch.float32, device=device)
+    at = torch.tensor([
         [0,0,0],
         [0,0,0],
         [0,0,0]
-    ]
-    up = [
+    ], dtype=torch.float32, device=device)
+    up = torch.tensor([
         [0,1,0],
         [0,1,0],
         [0,1,0]
-    ]
+    ], dtype=torch.float32, device=device)
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
