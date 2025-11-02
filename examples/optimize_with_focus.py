@@ -13,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-from ctypes import util
 import json
 import numpy as np
 import torch
@@ -25,6 +24,7 @@ from util import *
 import render
 import loss
 import imageio
+import util
 from datetime import datetime, timezone, timedelta
 
 import sys
