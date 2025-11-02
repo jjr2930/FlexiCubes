@@ -6,11 +6,9 @@ python optimize.py --ref_mesh "/workspace/FlexiCubes/examples/data/inputmodels/a
     --iter=100 \
     -lr=0.01 \
     -r 2048 2048 \
-    -fv 3246 9915 \
-    -mc 0 \
-    --sdf_loss False \ 
     --focus_start_iteration 50 \
-    --focus_capture_data "/workspace/FlexiCubes/examples/data/inputmodels/africa_man/positionItem.json" 
+    --focus_capture_data "/workspace/FlexiCubes/examples/data/inputmodels/africa_man/positionItem.json" \
+    --sdf_loss False
 
 
 # python optimize.py --ref_mesh "/workspace/FlexiCubes/examples/data/inputmodels/africa_man.obj" \
