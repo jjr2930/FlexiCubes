@@ -192,7 +192,7 @@ if __name__ == "__main__":
                 # 딕셔너리에서 x, y, z 값을 추출하여 배열로 변환
                 position = np.array([data["cameraPosition"]["x"], data["cameraPosition"]["y"], data["cameraPosition"]["z"]])
                 lookat = np.array([data["targetPosition"]["x"], data["targetPosition"]["y"], data["targetPosition"]["z"]])
-                fovy = np.radians(data["fovy"])  # 도를 라디안으로 변환
+                fovy = np.deg2rad(data["fovy"])  # 도를 라디안으로 변환
                 #up은 0,1,0 고정
                 up = np.array([0, 1, 0])
                 # numpy 배열을 torch 텐서로 변환
