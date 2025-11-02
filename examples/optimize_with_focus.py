@@ -189,11 +189,16 @@ if __name__ == "__main__":
             mv_list = []
             mvp_list = []
             for data in selected_focus_data:
-                position = np.array(data["cameraPosition"])
-                lookat = np.array(data["targetPosition"])
+                # 딕셔너리에서 x, y, z 값을 추출하여 배열로 변환
+                position = np.array([data["cameraPosition"]["x"], data["cameraPosition"]["y"], data["cameraPosition"]["z"]])
+                lookat = np.array([data["targetPosition"]["x"], data["targetPosition"]["y"], data["targetPosition"]["z"]])
                 fovy = data["fovy"]
                 #up은 0,1,0 고정
                 up = np.array([0, 1, 0])
+                # numpy 배열을 torch 텐서로 변환
+                position = torch.tensor(position, dtype=torch.float32, device=device)
+                lookat = torch.tensor(lookat, dtype=torch.float32, device=device)
+                up = torch.tensor(up, dtype=torch.float32, device=device)
                 mv = util.viewMatrix(position, lookat, up, device=device)
                 projection = util.perspective(fovy, FLAGS.train_res[0]/FLAGS.train_res[1], 0.1, 1000.0, device=device)
                 mvp = projection @ mv
