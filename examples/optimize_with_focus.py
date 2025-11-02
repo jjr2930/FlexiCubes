@@ -175,9 +175,9 @@ if __name__ == "__main__":
     # print(f"num_faces : {num_faces}, num_vertices : {num_vertices}")
 
     eye = torch.tensor([
-        [3,0,0],
-        [0,3,0],
-        [0,0,3],
+        [7,0,0],
+        [0,7,0],
+        [0,0,7],
     ], dtype=torch.float32, device=device)
     at = torch.tensor([
         [0,0,0],
