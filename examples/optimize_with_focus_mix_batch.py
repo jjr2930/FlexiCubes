@@ -189,8 +189,10 @@ if __name__ == "__main__":
         mvp_list = []
         
         batch_mv , batched_mvp = render.get_random_camera_batch(FLAGS.batch - mixing_count, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
-        mv_list.append(batch_mv)
-        mvp_list.append(batched_mvp)
+        # Split batch into individual matrices and add to list
+        for i in range(batch_mv.shape[0]):
+            mv_list.append(batch_mv[i])
+            mvp_list.append(batched_mvp[i])
         
             # sample random focus data from the loaded focus data
         selected_focus_data = random.choices(focus_data, k=mixing_count)
@@ -210,7 +212,7 @@ if __name__ == "__main__":
             mvp = projection @ mv
             mv_list.append(mv)
             mvp_list.append(mvp)
-            
+
         mv = torch.stack(mv_list, dim=0)
         mvp = torch.stack(mvp_list, dim=0)
     # ==============================================================================================
