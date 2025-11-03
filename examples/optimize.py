@@ -154,4 +154,4 @@ if __name__ == "__main__":
     #  Save ouput
     # ==============================================================================================     
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
-    mesh_np.export(os.path.join(FLAGS.out_dir, 'output_mesh.obj'))
+    mesh_np.export(os.path.join(FLAGS.out_dir, f'grid_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | batch : {FLAGS.batch} | lr {FLAGS.learning_rate} | train_res {FLAGS.train_res}.obj'))
