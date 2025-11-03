@@ -13,23 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import argparse
-import json
 import numpy as np
 import torch
 import nvdiffrast.torch as dr
 import trimesh
 import os
-import time
-import util
+from util import *
 import render
 import loss
 import imageio
-from datetime import datetime, timezone, timedelta
 
 import sys
 sys.path.append('..')
 from flexicubes import FlexiCubes
-import random
 
 ###############################################################################
 # Functions adapted from https://github.com/NVlabs/nvdiffrec
@@ -37,57 +33,6 @@ import random
 
 def lr_schedule(iter):
     return max(0.0, 10**(-(iter)*0.0002)) # Exponential falloff from [1.0, 0.1] over 5k epochs.    
-
-def time_to_string(seconds):
-    seconds = int(seconds)
-    h = (seconds % 86400) // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
-    return f"{h:02d}:{m:02d}:{s:02d}"
-
-def save_target_images(target, iteration, output_dir):
-    """Save target mask and depth images to files"""
-    target_images_dir = os.path.join(output_dir, 'target_images')
-    os.makedirs(target_images_dir, exist_ok=True)
-    
-    # Save mask images
-    mask_images = target['mask'].detach().cpu().numpy()
-    for i in range(mask_images.shape[0]):
-        mask_img = (mask_images[i] * 255).astype(np.uint8)
-        # Convert single channel to 3-channel RGB image
-        if len(mask_img.shape) == 3 and mask_img.shape[-1] == 1:
-            mask_img = np.repeat(mask_img, 3, axis=-1)
-        elif len(mask_img.shape) == 2:
-            mask_img = np.stack([mask_img, mask_img, mask_img], axis=-1)
-        imageio.imwrite(os.path.join(target_images_dir, f'mask_iter_{iteration:04d}_batch_{i:02d}.png'), mask_img)
-    
-    # Save depth images
-    depth_images = target['depth'].detach().cpu().numpy()
-    for i in range(depth_images.shape[0]):
-        # Normalize depth values to 0-255 range
-        depth_img = depth_images[i]
-        depth_min, depth_max = depth_img.min(), depth_img.max()
-        if depth_max > depth_min:
-            depth_img = (depth_img - depth_min) / (depth_max - depth_min) * 255
-        else:
-            depth_img = np.zeros_like(depth_img)
-        depth_img = depth_img.astype(np.uint8)
-        # Convert single channel to 3-channel RGB image
-        if len(depth_img.shape) == 3 and depth_img.shape[-1] == 1:
-            depth_img = np.repeat(depth_img, 3, axis=-1)
-        elif len(depth_img.shape) == 2:
-            depth_img = np.stack([depth_img, depth_img, depth_img], axis=-1)
-        imageio.imwrite(os.path.join(target_images_dir, f'depth_iter_{iteration:04d}_batch_{i:02d}.png'), depth_img)    
-
-def as_res_vec(res, device):
-    if isinstance(res, int):
-        return torch.tensor([res, res, res], dtype=torch.float32, device=device)
-    return torch.tensor(res, dtype=torch.float32, device=device)
-
-def print_now_time():
-    # utc time +9 (korea) 
-    nowDate = datetime.now(timezone.utc) + timedelta(hours=9)
-    print(f"Now time: {nowDate.strftime('%Y-%m-%d %H:%M:%S')}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='flexicubes optimization')
@@ -98,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--batch', type=int, default=8)
     parser.add_argument('-r', '--train_res', nargs=2, type=int, default=[2048, 2048])
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
-    parser.add_argument('--voxel_grid_res',nargs=3, type=int, default=[64,64,64])
+    parser.add_argument('--voxel_grid_res', type=int, default=64)
     
     parser.add_argument('--sdf_loss', type=bool, default=True)
     parser.add_argument('--develop_reg', type=bool, default=False)
@@ -106,25 +51,7 @@ if __name__ == "__main__":
     
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
-    parser.add_argument('-ss', '--save_step', type=bool, default=False)
-    #parser.add_argument('-mc', '--mixing_count', type=int, default=3)
-    parser.add_argument('-fsi', '--focus_start_iteration', type=int, default=2)
-    parser.add_argument('-fcd', '--focus_capture_data', type=str, default=None)
     FLAGS = parser.parse_args()
-
-    # ==============================================================================================
-    #  parse focus data
-    # ==============================================================================================
-
-    if FLAGS.focus_capture_data is None:
-        print("No focus capture data path provided. Using default focus observe vertices.")
-        sys.exit(0)
-    
-    #load focus data it json file
-    focus_data_json = json.load(open(FLAGS.focus_capture_data, 'r'))
-    focus_data = focus_data_json["items"]
-
-
     device = 'cuda'
     
     os.makedirs(FLAGS.out_dir, exist_ok=True)
@@ -160,81 +87,16 @@ if __name__ == "__main__":
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lambda x: lr_schedule(x)) 
     
     # ==============================================================================================
-    #  print now time
-    # ==============================================================================================   
-    
-    start_time = time.time()
-    print_now_time()
-    
-    #삼각형의 총갯수와 버텍스의 총갯수 출력
-    num_faces = gt_mesh.faces.shape[0]
-    num_vertices = gt_mesh.vertices.shape[0]
-    # print(f"num_faces : {num_faces}, num_vertices : {num_vertices}")
-
-    # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
-
-        if(it < FLAGS.focus_start_iteration ):
-            mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
-        else :
-            # sample random focus data from the loaded focus data
-            selected_focus_data = random.choices(focus_data, k=FLAGS.batch)
-
-            mv_list = []
-            mvp_list = []
-            for data in selected_focus_data:
-                position = np.array(data["cameraPosition"])
-                lookat = np.array(data["targetPosition"])
-                fovy = data["fovy"]
-                #up은 0,1,0 고정
-                up = np.array([0, 1, 0])
-                mv = util.viewMatrix(position, lookat, up, device=device)
-                projection = util.perspective(fovy, FLAGS.train_res[0]/FLAGS.train_res[1], 0.1, 1000.0, device=device)
-                mvp = projection @ mv
-                mv_list.append(mv)
-                mvp_list.append(mvp)
-            mv = torch.stack(mv_list, dim=0)
-            mvp = torch.stack(mvp_list, dim=0)
-        
-        
-    # ==============================================================================================
-    #  original code
-    # ==============================================================================================   
-
         # sample random camera poses
-        # if it < FLAGS.focus_count :
-        #     mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
-        # else :
-        #     #target triangle index is  22446, 58980
-        #     # 먼저 메시의 면 개수를 확인하고 안전한 인덱스 사용
-        #     num_faces = gt_mesh.faces.shape[0]
-        #     vertexIndex:int = 0
-        #     if it % 2 == 0:
-        #         vertexIndex = FLAGS.focus_observe_vertex[0]
-        #     else : 
-        #         vertexIndex = FLAGS.focus_observe_vertex[1]                          
-
-        #     #vertex_index = gt_mesh.faces[triangleIndex][0]  # 해당 삼각형의 0번째 정점 인덱스
-        #     vertex_coord = gt_mesh.vertices[vertexIndex]   # 해당 정점의 좌표 (Tensor)
-        #     # print(f"it : {it}, triangleIndex : {triangleIndex}, vertex_index : {vertex_index}, vertex_coord : {vertex_coord}");
-
-        #     mv, mvp = render.get_random_camera_batch_custom(FLAGS.batch, iter_res=FLAGS.train_res, position=vertex_coord.cpu().numpy(),device=device)
-    # ==============================================================================================
-    #  original end
-    # ==============================================================================================   
-
+        mv, mvp = render.get_random_camera_batch(FLAGS.batch, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
         # render gt mesh
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
-        
-        if(FLAGS.save_step):# Save target images to files
-            save_target_images(target, it, FLAGS.out_dir)
-        
         # extract and render FlexiCubes mesh
-        voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
-        grid_verts = x_nx3 + (2-1e-8) / (voxel_res * 2) * torch.tanh(deform)
+        grid_verts = x_nx3 + (2-1e-8) / (FLAGS.voxel_grid_res * 2) * torch.tanh(deform)
         vertices, faces, L_dev = fc(grid_verts, sdf, cube_fx8, FLAGS.voxel_grid_res, beta_fx12=weight[:,:12], alpha_fx8=weight[:,12:20],
             gamma_f=weight[:,20], training=True)
         flexicubes_mesh = Mesh(vertices, faces)
@@ -289,14 +151,7 @@ if __name__ == "__main__":
                 print(f"Optimization Step [{it}/{FLAGS.iter}], Loss: {total_loss.item():.4f}")
             
     # ==============================================================================================
-    #  print now time and duration time
-    # ==============================================================================================     
-    print_now_time();
-    print(f"duration : {time.time() - start_time}")
-
-    # ==============================================================================================
     #  Save ouput
     # ==============================================================================================     
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
-    mesh_np.export(os.path.join(FLAGS.out_dir, f'gird_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | lr {FLAGS.learning_rate} | fc {FLAGS.focus_count} | mc {FLAGS.mixing_count} | train_res {FLAGS.train_res}.obj'))
-
+    mesh_np.export(os.path.join(FLAGS.out_dir, 'output_mesh.obj'))
