@@ -191,7 +191,7 @@ if __name__ == "__main__":
         batch_mv , batched_mvp = render.get_random_camera_batch(FLAGS.batch - mixing_count, iter_res=FLAGS.train_res, device=device, use_kaolin=False)
         # Split batch into individual matrices and add to list
         for i in range(batch_mv.shape[0]):
-            print("batch_mv.shape[0] :", batch_mv.shape[0])
+            #print("batch_mv.shape[0] :", batch_mv.shape[0])
             mv_list.append(batch_mv[i])
             mvp_list.append(batched_mvp[i])
         
