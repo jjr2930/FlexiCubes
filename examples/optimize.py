@@ -18,6 +18,8 @@ import torch
 import nvdiffrast.torch as dr
 import trimesh
 import os
+import time
+from datetime import datetime
 from util import *
 import render
 import loss
@@ -39,7 +41,20 @@ def as_res_vec(res, device):
         return torch.tensor([res, res, res], dtype=torch.float32, device=device)
     return torch.tensor(res, dtype=torch.float32, device=device)
 
+def print_elapsed_time():
+    elapsed_time = time.time() - start_time
+    print(f"Elapsed time: {elapsed_time // 60:.0f}m {elapsed_time % 60:.0f}s")
+
+def print_current_time(custom_string :str):
+    now = datetime.now()
+    print(f"Current time: {now.hour:02d}:{now.minute:02d}:{now.second:02d} | {custom_string}")
+
 if __name__ == "__main__":
+    # 시 분 초 출력
+
+    print_current_time()
+    start_time = time.time()
+
     parser = argparse.ArgumentParser(description='flexicubes optimization')
     parser.add_argument('-o', '--out_dir', type=str, default=None)
     parser.add_argument('-rm', '--ref_mesh', type=str)    
@@ -164,3 +179,5 @@ if __name__ == "__main__":
     # ==============================================================================================     
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
     mesh_np.export(os.path.join(FLAGS.out_dir, f'grid_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | batch : {FLAGS.batch} | lr {FLAGS.learning_rate} | train_res {FLAGS.train_res}.obj'))
+
+    print_elapsed_time()
