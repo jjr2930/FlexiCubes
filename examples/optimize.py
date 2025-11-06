@@ -45,14 +45,14 @@ def print_elapsed_time():
     elapsed_time = time.time() - start_time
     print(f"Elapsed time: {elapsed_time // 60:.0f}m {elapsed_time % 60:.0f}s")
 
-def print_current_time(custom_string :str):
+def print_current_time(custom_string :str=""):
     now = datetime.now()
     print(f"Current time: {now.hour:02d}:{now.minute:02d}:{now.second:02d} | {custom_string}")
 
 if __name__ == "__main__":
     # 시 분 초 출력
 
-    print_current_time()
+    print_current_time("enter main")
     start_time = time.time()
 
     parser = argparse.ArgumentParser(description='flexicubes optimization')
@@ -111,6 +111,8 @@ if __name__ == "__main__":
     # ==============================================================================================
     #  Train loop
     # ==============================================================================================   
+    print_current_time("start training")
+    start_time = time.time()
     for it in range(FLAGS.iter): 
         optimizer.zero_grad()
         # sample random camera poses
