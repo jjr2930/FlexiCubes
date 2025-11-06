@@ -43,7 +43,7 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--batch', type=int, default=8)
     parser.add_argument('-r', '--train_res', nargs=2, type=int, default=[2048, 2048])
     parser.add_argument('-lr', '--learning_rate', type=float, default=0.01)
-    parser.add_argument('--voxel_grid_res', type=int, default=64)
+    parser.add_argument('--voxel_grid_res', nargs=3, type=int, default=[128,128,128])
     
     parser.add_argument('--sdf_loss', type=bool, default=True)
     parser.add_argument('--develop_reg', type=bool, default=False)
@@ -52,8 +52,10 @@ if __name__ == "__main__":
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
     FLAGS = parser.parse_args()
-    device = 'cuda'
     
+    device = 'cuda'
+    voxel_grid_res = FLAGS.voxel_grid_res
+
     os.makedirs(FLAGS.out_dir, exist_ok=True)
     glctx = dr.RasterizeGLContext()
     
@@ -65,7 +67,7 @@ if __name__ == "__main__":
     #  Create and initialize FlexiCubes
     # ==============================================================================================
     fc = FlexiCubes(device)
-    x_nx3, cube_fx8 = fc.construct_voxel_grid(FLAGS.voxel_grid_res)
+    x_nx3, cube_fx8 = fc.construct_voxel_grid(voxel_grid_res, device)
     x_nx3 *= 2 # scale up the grid so that it's larger than the target object
     
     sdf = torch.rand_like(x_nx3[:,0]) - 0.1 # randomly init SDF
