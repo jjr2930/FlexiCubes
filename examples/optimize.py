@@ -34,6 +34,11 @@ from flexicubes import FlexiCubes
 def lr_schedule(iter):
     return max(0.0, 10**(-(iter)*0.0002)) # Exponential falloff from [1.0, 0.1] over 5k epochs.    
 
+def as_res_vec(res, device):
+    if isinstance(res, int):
+        return torch.tensor([res, res, res], dtype=torch.float32, device=device)
+    return torch.tensor(res, dtype=torch.float32, device=device)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='flexicubes optimization')
     parser.add_argument('-o', '--out_dir', type=str, default=None)
@@ -98,7 +103,9 @@ if __name__ == "__main__":
         # render gt mesh
         target = render.render_mesh_paper(gt_mesh, mv, mvp, FLAGS.train_res)
         # extract and render FlexiCubes mesh
-        grid_verts = x_nx3 + (2-1e-8) / (FLAGS.voxel_grid_res * 2) * torch.tanh(deform)
+
+        voxel_res = as_res_vec(FLAGS.voxel_grid_res, device)
+        grid_verts = x_nx3 + (2-1e-8) / (voxel_res * 2) * torch.tanh(deform)
         vertices, faces, L_dev = fc(grid_verts, sdf, cube_fx8, FLAGS.voxel_grid_res, beta_fx12=weight[:,:12], alpha_fx8=weight[:,12:20],
             gamma_f=weight[:,20], training=True)
         flexicubes_mesh = Mesh(vertices, faces)
