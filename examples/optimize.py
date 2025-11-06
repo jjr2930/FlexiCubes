@@ -67,7 +67,7 @@ if __name__ == "__main__":
     #  Create and initialize FlexiCubes
     # ==============================================================================================
     fc = FlexiCubes(device)
-    x_nx3, cube_fx8 = fc.construct_voxel_grid(voxel_grid_res, device)
+    x_nx3, cube_fx8 = fc.construct_voxel_grid(voxel_grid_res)
     x_nx3 *= 2 # scale up the grid so that it's larger than the target object
     
     sdf = torch.rand_like(x_nx3[:,0]) - 0.1 # randomly init SDF
