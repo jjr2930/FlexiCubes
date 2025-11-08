@@ -88,6 +88,9 @@ if __name__ == "__main__":
     # ==============================================================================================
     fc = FlexiCubes(device)
     x_nx3, cube_fx8 = fc.construct_voxel_grid(voxel_grid_res)
+    #x_nx3: 좌표의 min,max를 출력한다.
+    print(f"x_nx3: min {x_nx3.min(dim=0)}, max {x_nx3.max(dim=0)}")
+
     x_nx3 *= 2 # scale up the grid so that it's larger than the target object
     
     sdf = torch.rand_like(x_nx3[:,0]) - 0.1 # randomly init SDF
