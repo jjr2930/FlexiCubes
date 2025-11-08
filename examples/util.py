@@ -127,6 +127,12 @@ def load_mesh_jy(path, device):
     vertices[:, 1] = (vertices[:, 1] - min_y) / (max_y - min_y) * 1.8 - 0.9
     # z축: [min_z, max_z] -> [-0.8, 0.8]
     vertices[:, 2] = (vertices[:, 2] - min_z) / (max_z - min_z) * 1.8 - 0.9
+
+    new_min, new_max = vertices.min(dim=0), vertices.max(dim=0)
+
+    #new_min, new_max 출력
+    print(f"After normalization, new min: {new_min}, new max: {new_max}")
+
     return Mesh(vertices, faces), vmin, vmax
 
     
