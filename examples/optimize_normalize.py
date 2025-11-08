@@ -190,6 +190,6 @@ if __name__ == "__main__":
         vertices = (vertices +1) /2 * (vmax - vmin) + vmin
 
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
-    mesh_np.export(os.path.join(FLAGS.out_dir, f'grid_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | batch : {FLAGS.batch} | lr {FLAGS.learning_rate} | train_res {FLAGS.train_res}.obj'))
+    mesh_np.export(os.path.join(FLAGS.out_dir, f'grid_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | batch : {FLAGS.batch} | lr {FLAGS.learning_rate} | train_res {FLAGS.train_res} | normalize {FLAGS.output_normalize}.obj'))
 
     print_elapsed_time()
