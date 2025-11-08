@@ -74,11 +74,12 @@ if __name__ == "__main__":
     parser.add_argument('-on', '--output_normalize', type=bool, default=False)
     FLAGS = parser.parse_args()
 
-    print("----------- flags -------------")
+    print("----------- start flags -------------")
     #print flags
     for k, v in vars(FLAGS).items():
         print(f"{k}: {v}")
-    
+    print("----------- end flags -------------")
+
     device = 'cuda'
     voxel_grid_res = FLAGS.voxel_grid_res
 
