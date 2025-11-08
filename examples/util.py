@@ -121,12 +121,12 @@ def load_mesh_jy(path, device):
     min_z, max_z = vmin[2], vmax[2]  # z축 최솟값, 최댓값
     
     # 각 축별로 개별 정규화 수행
-    # x축: [min_x, max_x] -> [-0.9, 0.9]
-    vertices[:, 0] = (vertices[:, 0] - min_x) / (max_x - min_x) * 1.8 - 0.9
-    # y축: [min_y, max_y] -> [-0.9, 0.9]  
-    vertices[:, 1] = (vertices[:, 1] - min_y) / (max_y - min_y) * 1.8 - 0.9
-    # z축: [min_z, max_z] -> [-0.9, 0.9]
-    vertices[:, 2] = (vertices[:, 2] - min_z) / (max_z - min_z) * 1.8 - 0.9
+    # x축: [min_x, max_x] -> [-0.8, 0.8]
+    vertices[:, 0] = (vertices[:, 0] - min_x) / (max_x - min_x) * 1.6 - 0.8
+    # y축: [min_y, max_y] -> [-0.8, 0.8]  
+    vertices[:, 1] = (vertices[:, 1] - min_y) / (max_y - min_y) * 1.6 - 0.8
+    # z축: [min_z, max_z] -> [-0.8, 0.8]
+    vertices[:, 2] = (vertices[:, 2] - min_z) / (max_z - min_z) * 1.6 - 0.8
     return Mesh(vertices, faces), vmin, vmax
 
     
