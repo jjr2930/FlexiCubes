@@ -71,6 +71,7 @@ if __name__ == "__main__":
     
     parser.add_argument('-dr', '--display_res', nargs=2, type=int, default=[512, 512])
     parser.add_argument('-si', '--save_interval', type=int, default=20)
+    parser.add_argument('-on', '--output_normalize', type=bool, default=False)
     FLAGS = parser.parse_args()
     
     device = 'cuda'
@@ -184,9 +185,9 @@ if __name__ == "__main__":
     # ==============================================================================================     
 
     # === 정규화 하여 만든 메시의 버텍스들을 vmin과 vmax를 사용하여 원래 크기로 복원 ===
-    vertices = (vertices +1) /2 * (vmax - vmin) + vmin
-    
-
+    if(FLAGS.output_normalize):
+        print("Output normalized mesh.")
+        vertices = (vertices +1) /2 * (vmax - vmin) + vmin
 
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
     mesh_np.export(os.path.join(FLAGS.out_dir, f'grid_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | batch : {FLAGS.batch} | lr {FLAGS.learning_rate} | train_res {FLAGS.train_res}.obj'))
