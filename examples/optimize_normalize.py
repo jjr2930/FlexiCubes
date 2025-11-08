@@ -80,7 +80,7 @@ if __name__ == "__main__":
     glctx = dr.RasterizeGLContext()
     
     # Load GT mesh
-    gt_mesh = load_mesh(FLAGS.ref_mesh, device)
+    gt_mesh, vmin, vmax = load_mesh_jy(FLAGS.ref_mesh, device)
     gt_mesh.auto_normals() # compute face normals for visualization
     
     # ==============================================================================================
@@ -182,6 +182,12 @@ if __name__ == "__main__":
     # ==============================================================================================
     #  Save ouput
     # ==============================================================================================     
+
+    # === 정규화 하여 만든 메시의 버텍스들을 vmin과 vmax를 사용하여 원래 크기로 복원 ===
+    vertices = (vertices +1) /2 * (vmax - vmin) + vmin
+    
+
+
     mesh_np = trimesh.Trimesh(vertices = vertices.detach().cpu().numpy(), faces=faces.detach().cpu().numpy(), process=False)
     mesh_np.export(os.path.join(FLAGS.out_dir, f'grid_res {FLAGS.voxel_grid_res} | iter {FLAGS.iter} | batch : {FLAGS.batch} | lr {FLAGS.learning_rate} | train_res {FLAGS.train_res}.obj'))
 

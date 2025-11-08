@@ -127,7 +127,7 @@ def load_mesh_jy(path, device):
     vertices[:, 1] = (vertices[:, 1] - min_y) / (max_y - min_y) * 1.8 - 0.9
     # z축: [min_z, max_z] -> [-0.9, 0.9]
     vertices[:, 2] = (vertices[:, 2] - min_z) / (max_z - min_z) * 1.8 - 0.9
-    return Mesh(vertices, faces)
+    return Mesh(vertices, faces), vmin, vmax
 
     
     # Normalize
