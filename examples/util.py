@@ -114,7 +114,7 @@ def load_mesh_jy(path, device):
     #면 과 정점 갯수 출력
     print(f"Loaded mesh from {path}, #faces: {faces.shape[0]}, #vertices: {vertices.shape[0]}")
     
-    vmin, vmax = vertices.min(dim=0), vertices.max(dim=0)
+    vmin, vmax = vertices.min(dim=0).values, vertices.max(dim=0).values
     scale = 1.8 / torch.max(vmax - vmin).item()
     vertices = vertices - (vmax + vmin) / 2 # Center mesh on origin
     vertices = vertices * scale # Rescale to [-0.9, 0.9]
