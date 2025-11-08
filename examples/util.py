@@ -114,10 +114,19 @@ def load_mesh_jy(path, device):
     #면 과 정점 갯수 출력
     print(f"Loaded mesh from {path}, #faces: {faces.shape[0]}, #vertices: {vertices.shape[0]}")
     
+    # x, y, z 각 축별로 min, max 값 계산
     vmin, vmax = vertices.min(dim=0).values, vertices.max(dim=0).values
-    scale = 1.8 / torch.max(vmax - vmin).item()
-    vertices = vertices - (vmax + vmin) / 2 # Center mesh on origin
-    vertices = vertices * scale # Rescale to [-0.9, 0.9]
+    min_x, max_x = vmin[0], vmax[0]  # x축 최솟값, 최댓값
+    min_y, max_y = vmin[1], vmax[1]  # y축 최솟값, 최댓값
+    min_z, max_z = vmin[2], vmax[2]  # z축 최솟값, 최댓값
+    
+    # 각 축별로 개별 정규화 수행
+    # x축: [min_x, max_x] -> [-0.9, 0.9]
+    vertices[:, 0] = (vertices[:, 0] - min_x) / (max_x - min_x) * 1.8 - 0.9
+    # y축: [min_y, max_y] -> [-0.9, 0.9]  
+    vertices[:, 1] = (vertices[:, 1] - min_y) / (max_y - min_y) * 1.8 - 0.9
+    # z축: [min_z, max_z] -> [-0.9, 0.9]
+    vertices[:, 2] = (vertices[:, 2] - min_z) / (max_z - min_z) * 1.8 - 0.9
     return Mesh(vertices, faces)
 
     
