@@ -63,7 +63,7 @@ def get_random_camera_batch_custom(batch_size, fovy = np.deg2rad(45), iter_res=[
         
         return torch.stack(mv_batch).to(device), torch.stack(mvp_batch).to(device)
 
-def get_random_camera_batch(batch_size, fovy = np.deg2rad(45), iter_res=[512,512], cam_near_far=[0.1, 1000.0], cam_radius=3.0, device="cuda", use_kaolin=True):
+def get_random_camera_batch(batch_size, fovy = np.deg2rad(45), iter_res=[512,512], cam_near_far=[0.1, 1000.0], cam_radius=4.0, device="cuda", use_kaolin=True):
     if use_kaolin:
         camera_pos = torch.stack(kal.ops.coords.spherical2cartesian(
             *kal.ops.random.sample_spherical_coords((batch_size,), azimuth_low=0., azimuth_high=math.pi * 2,
